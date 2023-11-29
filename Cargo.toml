@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "lfml",
+    "lfml-macros",
+    "lfml-escape",
+]
+resolver = "2"
+

@@ -1,0 +1,10 @@
+[package]
+name = "lfml"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lfml-macros = { path = "../lfml-macros" }
+lfml-escape = { path = "../lfml-escape" }
