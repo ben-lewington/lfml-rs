@@ -221,3 +221,28 @@ fn option_fields_are_handled() {
 
     assert_eq!(EmbedAsAttrs::raw(&y), " foo=\"a\" bar=\"0\" ");
 }
+
+#[test]
+fn option_fields_work_with_generics() {
+    #[derive(EmbedAsAttrs)]
+    struct B<T> {
+        foo: Option<T>,
+    }
+
+    let y = B { foo: Some("a") };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo=\"a\" ");
+}
+
+#[test]
+fn option_fields_can_be_escaped() {
+    #[derive(EmbedAsAttrs)]
+    struct A<'a> {
+        #[escape_value]
+        foo: Option<&'a str>,
+    }
+
+    let y = A { foo: Some("<") };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo=\"&lt;\" ");
+}

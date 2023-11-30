@@ -259,24 +259,29 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
 
         let fmt_expr = if is_option_type {
             let fmt_attr_lit = LitStr::new(&fmt_attr, ident.span());
+
+            let fmt_value = if escape_value {
+                quote! { lfml::escape_string(&x.to_string()) }
+            } else {
+                quote! { &x }
+            };
+
             quote! {{
                 if let Some(ref x) = self.#ident {
-                    format!(#fmt_attr_lit, &x)
+                    format!(#fmt_attr_lit, #fmt_value)
                 } else {
                     "".into()
                 }
             }}
         } else {
-            quote! { self.#ident }
+            if escape_value {
+                quote! { lfml::escape_string(&self.#ident.to_string()) }
+            } else {
+                quote! { self.#ident }
+            }
         };
 
-        if escape_value {
-            fields_pfx.push(quote! {
-                lfml::escape_string(&#fmt_expr.to_string())
-            });
-        } else {
-            fields_pfx.push(fmt_expr);
-        };
+        fields_pfx.push(fmt_expr);
 
         format_string.push_str(if is_option_type { "{}" } else { &fmt_attr });
     }
