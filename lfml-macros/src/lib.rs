@@ -1,8 +1,7 @@
 extern crate proc_macro;
 
 mod derive;
-
-use quote::quote;
+mod parse_lfml;
 
 #[proc_macro_derive(EmbedAsAttrs, attributes(escape_value, prefix, suffix, rename))]
 pub fn reflect_attrs(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -14,12 +13,8 @@ pub fn reflect_attrs(input: proc_macro::TokenStream) -> proc_macro::TokenStream 
 }
 
 #[proc_macro]
-pub fn html(_input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    //
-    quote! {{
-        extern crate lfml;
-
-        lfml::Escaped("foo")
-    }}
-    .into()
+pub fn html(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    parse_lfml::generate_markup_expr(input.into())
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }
