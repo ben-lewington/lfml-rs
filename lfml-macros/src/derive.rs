@@ -184,23 +184,26 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
 
         let ident = ident.as_ref().unwrap();
 
-        let escape_value = attrs.iter().find(|&a| {
-            if let Attribute {
-                pound_token: _,
-                style: AttrStyle::Outer,
-                bracket_token: _,
-                meta: Meta::Path(path),
-            } = a
-            {
-                let Some(i) = path.get_ident() else {
-                    return false;
-                };
+        let escape_value = attrs
+            .iter()
+            .find(|&a| {
+                if let Attribute {
+                    pound_token: _,
+                    style: AttrStyle::Outer,
+                    bracket_token: _,
+                    meta: Meta::Path(path),
+                } = a
+                {
+                    let Some(i) = path.get_ident() else {
+                        return false;
+                    };
 
-                i == "escape_value"
-            } else {
-                false
-            }
-        }).is_some();
+                    i == "escape_value"
+                } else {
+                    false
+                }
+            })
+            .is_some();
 
         let to_attr = if let Some(t) = attrs.iter().find_map(|a| {
             if let Attribute {

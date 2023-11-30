@@ -200,24 +200,24 @@ fn option_fields_are_handled() {
         bar: Option<i32>,
     }
 
-    let y = A { foo: Some("a".into()), bar: None };
+    let y = A {
+        foo: Some("a".into()),
+        bar: None,
+    };
 
-    assert_eq!(
-        EmbedAsAttrs::raw(&y),
-        " foo=\"a\" "
-    );
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo=\"a\" ");
 
-    let y = A { foo: None, bar: None };
+    let y = A {
+        foo: None,
+        bar: None,
+    };
 
-    assert_eq!(
-        EmbedAsAttrs::raw(&y),
-        " "
-    );
+    assert_eq!(EmbedAsAttrs::raw(&y), " ");
 
-    let y = A { foo: Some("a".into()), bar: Some(0) };
+    let y = A {
+        foo: Some("a".into()),
+        bar: Some(0),
+    };
 
-    assert_eq!(
-        EmbedAsAttrs::raw(&y),
-        " foo=\"a\" bar=\"0\" "
-    );
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo=\"a\" bar=\"0\" ");
 }
