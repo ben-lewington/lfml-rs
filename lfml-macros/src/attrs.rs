@@ -1,7 +1,7 @@
 use quote::quote;
 use syn::{
     AttrStyle, Attribute, Data, DataStruct, DeriveInput, Expr, ExprLit, Field, Fields, FieldsNamed,
-    Lit, LitStr, Meta, MetaNameValue,
+    GenericParam, Lit, LitStr, Meta, MetaNameValue, TypeParam,
 };
 
 pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
@@ -28,10 +28,10 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                 let Some(pfx) = p.get_ident() else {
                     return None;
                 };
-                if pfx.to_string() == "prefix" {
-                    return Some("data".to_owned());
+                if pfx == "prefix" {
+                    Some("data".to_owned())
                 } else {
-                    return None;
+                    None
                 }
             }
             Meta::NameValue(MetaNameValue {
@@ -43,7 +43,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                     return None;
                 };
 
-                if pfx.to_string() == "prefix" {
+                if pfx == "prefix" {
                     // TODO: it's important that the value is a LitStr
                     let Expr::Lit(ExprLit {
                         attrs: _,
@@ -52,14 +52,74 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                     else {
                         return None;
                     };
+
                     Some(l.value())
                 } else {
-                    return None;
+                    None
                 }
             }
-            Meta::List(_) => return None,
+            Meta::List(_) => None,
         }
     });
+
+    let global_sfx = attrs.iter().find_map(|a| {
+        let Attribute {
+            pound_token: _,
+            style: AttrStyle::Outer,
+            bracket_token: _,
+            meta,
+        } = a
+        else {
+            return None;
+        };
+        match meta {
+            Meta::NameValue(MetaNameValue {
+                path,
+                eq_token: _,
+                value,
+            }) => {
+                let Some(pfx) = path.get_ident() else {
+                    return None;
+                };
+
+                if pfx == "suffix" {
+                    // TODO: it's important that the value is a LitStr
+                    let Expr::Lit(ExprLit {
+                        attrs: _,
+                        lit: Lit::Str(l),
+                    }) = value
+                    else {
+                        return None;
+                    };
+
+                    Some(l.value())
+                } else {
+                    None
+                }
+            }
+            Meta::Path(_) => None,
+            Meta::List(_) => None,
+        }
+    });
+
+    let disp_where: Vec<proc_macro2::TokenStream> = generics
+        .params
+        .iter()
+        .filter_map(|gp| {
+            let GenericParam::Type(TypeParam {
+                attrs: _,
+                ident,
+                colon_token: _,
+                bounds: _,
+                eq_token: _,
+                default: _,
+            }) = gp
+            else {
+                return None;
+            };
+            Some(quote! { where #ident: ::core::fmt::Display })
+        })
+        .collect();
 
     // TODO: for any type parameters, when we implement EmbedAsAttrs, we will need to add a
     // core::fmt::Display trait bound
@@ -124,7 +184,8 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                 let Some(i) = path.get_ident() else {
                     return false;
                 };
-                return i.to_string() == "escape_value";
+
+                i == "escape_value"
             } else {
                 false
             }
@@ -138,11 +199,54 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
             });
         };
 
-        let to_attr = if let Some(ref p) = global_pfx {
-            // TODO: a guard on the length of p > 0? maybe that lives upstairs
-            format!("{p}-{}", ident.to_string())
+        let to_attr = if let Some(t) = attrs.iter().find_map(|a| {
+            if let Attribute {
+                pound_token: _,
+                style: AttrStyle::Outer,
+                bracket_token: _,
+                meta,
+            } = a
+            {
+                let Meta::NameValue(MetaNameValue {
+                    path,
+                    eq_token: _,
+                    value,
+                }) = meta
+                else {
+                    return None;
+                };
+                if let Some(p) = path.get_ident() {
+                    if p == "rename" {
+                        let Expr::Lit(ExprLit {
+                            attrs: _,
+                            lit: Lit::Str(l),
+                        }) = value
+                        else {
+                            return None;
+                        };
+                        return Some(l.value());
+                    }
+                } else {
+                    return None;
+                };
+            };
+            None
+        }) {
+            t.to_string()
         } else {
-            ident.to_string()
+            let t = if let Some(ref p) = global_pfx {
+                // TODO: a guard on the length of p > 0? maybe that lives upstairs
+                format!("{p}-{}", ident)
+            } else {
+                ident.to_string()
+            };
+
+            if let Some(ref s) = global_sfx {
+                // TODO: a guard on the length of p > 0? maybe that lives upstairs
+                format!("{}-{s}", t)
+            } else {
+                t
+            }
         };
 
         format_string.push_str(&format!("{}=\"{{}}\" ", to_attr));
@@ -152,7 +256,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
 
     Ok(quote! {
         #[automatically_derived]
-        impl #impl_generics lfml::EmbedAsAttrs for #ident #impl_ty #impl_where {
+        impl #impl_generics lfml::EmbedAsAttrs for #ident #impl_ty #impl_where #(#disp_where),* {
             fn raw(&self) -> String {
                 format!(#fmt_str, #(#fields_pfx),*)
             }

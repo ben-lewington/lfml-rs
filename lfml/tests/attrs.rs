@@ -1,32 +1,46 @@
 use lfml::EmbedAsAttrs;
 
 #[test]
-fn basic_attrs() {
+fn basic() {
     #[derive(EmbedAsAttrs)]
-    struct Datum<'a> {
+    struct A<'a> {
         foo: i32,
         bar: &'a str,
     }
 
-    let y = Datum { foo: 0, bar: "a" };
+    let y = A { foo: 0, bar: "a" };
 
     assert_eq!(EmbedAsAttrs::raw(&y), " foo=\"0\" bar=\"a\" ");
 }
 
 #[test]
-fn global_prefixes() {
+fn escape_values() {
     #[derive(EmbedAsAttrs)]
-    struct A<T: core::fmt::Display> {
+    struct A {
         #[escape_value]
-        bar: T,
+        bar: String,
     }
 
-    let y = A { bar: "<a></a>" };
+    let y = A { bar: "<a></a>".into() };
 
     assert_eq!(EmbedAsAttrs::raw(&y), " bar=\"&lt;a&gt;&lt;/a&gt;\" ");
+}
 
+#[test]
+fn global_prefix() {
     #[derive(EmbedAsAttrs)]
     #[prefix]
+    struct A<'a> {
+        foo: &'a str,
+        bar: &'a str,
+    }
+
+    let y = A { foo: "a", bar: "a" };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " data-foo=\"a\" data-bar=\"a\" ");
+
+    #[derive(EmbedAsAttrs)]
+    #[prefix = "x-data"]
     struct B<'a> {
         foo: &'a str,
         bar: &'a str,
@@ -34,16 +48,144 @@ fn global_prefixes() {
 
     let y = B { foo: "a", bar: "a" };
 
-    assert_eq!(EmbedAsAttrs::raw(&y), " data-foo=\"a\" data-bar=\"a\" ");
+    assert_eq!(EmbedAsAttrs::raw(&y), " x-data-foo=\"a\" x-data-bar=\"a\" ");
+}
 
+#[test]
+fn global_suffix() {
     #[derive(EmbedAsAttrs)]
-    #[prefix = "x-data"]
-    struct C<'a> {
+    #[suffix = "attr"]
+    struct A<'a> {
         foo: &'a str,
         bar: &'a str,
     }
 
-    let y = C { foo: "a", bar: "a" };
+    let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(EmbedAsAttrs::raw(&y), " x-data-foo=\"a\" x-data-bar=\"a\" ");
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"a\" ");
+}
+
+#[test]
+fn rename_field() {
+    #[derive(EmbedAsAttrs)]
+    struct A<'a> {
+        foo: &'a str,
+        #[rename = "baz"]
+        bar: &'a str,
+    }
+
+    let y = A { foo: "a", bar: "a" };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo=\"a\" baz=\"a\" ");
+}
+
+#[test]
+fn rename_overrides_prefix_and_suffix() {
+    #[derive(EmbedAsAttrs)]
+    #[prefix]
+    struct A<'a> {
+        foo: &'a str,
+        #[rename = "baz"]
+        bar: &'a str,
+    }
+
+    let y = A { foo: "a", bar: "a" };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " data-foo=\"a\" baz=\"a\" ");
+
+    #[derive(EmbedAsAttrs)]
+    #[suffix = "attr"]
+    struct B<'a> {
+        foo: &'a str,
+        #[rename = "baz"]
+        bar: &'a str,
+    }
+
+    let y = B { foo: "a", bar: "a" };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo-attr=\"a\" baz=\"a\" ");
+}
+
+#[test]
+fn global_prefix_and_suffix() {
+    #[derive(EmbedAsAttrs)]
+    #[suffix = "attr"]
+    #[prefix]
+    struct A<'a> {
+        foo: &'a str,
+        bar: &'a str,
+    }
+
+    let y = A { foo: "a", bar: "a" };
+
+    assert_eq!(
+        EmbedAsAttrs::raw(&y),
+        " data-foo-attr=\"a\" data-bar-attr=\"a\" "
+    );
+
+    #[derive(EmbedAsAttrs)]
+    #[suffix = "attr"]
+    #[prefix = "x-data"]
+    struct B<'a> {
+        foo: &'a str,
+        bar: &'a str,
+    }
+
+    let y = B { foo: "a", bar: "a" };
+
+    assert_eq!(
+        EmbedAsAttrs::raw(&y),
+        " x-data-foo-attr=\"a\" x-data-bar-attr=\"a\" "
+    );
+}
+
+#[test]
+fn blanda_uppa() {
+    #[derive(EmbedAsAttrs)]
+    #[suffix = "attr"]
+    struct A<'a> {
+        foo: &'a str,
+        #[escape_value]
+        bar: &'a str,
+    }
+
+    let y = A { foo: "a", bar: "<" };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"&lt;\" ");
+
+    #[derive(EmbedAsAttrs)]
+    #[prefix]
+    struct B<'a> {
+        foo: &'a str,
+        #[escape_value]
+        bar: &'a str,
+    }
+
+    let y = B { foo: "a", bar: "<" };
+
+    assert_eq!(EmbedAsAttrs::raw(&y), " data-foo=\"a\" data-bar=\"&lt;\" ");
+
+    #[derive(EmbedAsAttrs)]
+    #[prefix]
+    #[suffix = "attr"]
+    struct C<'a> {
+        foo: &'a str,
+        #[escape_value]
+        bar: &'a str,
+    }
+
+    let y = C { foo: "a", bar: "<" };
+
+    assert_eq!(
+        EmbedAsAttrs::raw(&y),
+        " data-foo-attr=\"a\" data-bar-attr=\"&lt;\" "
+    );
+}
+
+#[test]
+fn display_trait_bound_is_delegated_for_generic_types() {
+    #[derive(EmbedAsAttrs)]
+    struct A<T> {
+        foo: T,
+    }
 }
