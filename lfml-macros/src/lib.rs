@@ -1,6 +1,6 @@
 extern crate proc_macro;
 
-mod attrs;
+mod derive;
 
 use quote::quote;
 
@@ -8,7 +8,7 @@ use quote::quote;
 pub fn reflect_attrs(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
 
-    attrs::expand_embed_as_attrs(&input)
+    derive::expand_embed_as_attrs(&input)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
