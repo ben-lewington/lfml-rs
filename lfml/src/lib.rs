@@ -7,5 +7,11 @@ pub trait EmbedAsAttrs {
 
 pub struct Escaped<T>(pub T);
 
+impl<T: std::fmt::Display> Escaped<T> {
+    pub fn into_string(self) -> String {
+        self.0.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {}
