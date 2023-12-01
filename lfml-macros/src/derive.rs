@@ -189,15 +189,16 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                 pound_token: _,
                 style: AttrStyle::Outer,
                 bracket_token: _,
-                meta: Meta::NameValue(MetaNameValue {
-                    path,
-                    eq_token: _,
-                    value:
-                        Expr::Lit(ExprLit {
-                            attrs: _,
-                            lit: Lit::Str(l),
-                        }),
-                }),
+                meta:
+                    Meta::NameValue(MetaNameValue {
+                        path,
+                        eq_token: _,
+                        value:
+                            Expr::Lit(ExprLit {
+                                attrs: _,
+                                lit: Lit::Str(l),
+                            }),
+                    }),
             } = a
             {
                 Some(
