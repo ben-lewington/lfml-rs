@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use proc_macro2::{Ident, Literal, Span, TokenStream, TokenTree, token_stream::IntoIter};
+use proc_macro2::{token_stream::IntoIter, Ident, Literal, Span, TokenStream, TokenTree};
 use quote::quote;
 use syn::Lit;
 
@@ -86,7 +86,9 @@ fn process_tokens(
                     ));
                 },
             },
-            TokenTree::Group(_) => todo!("Group"),
+            TokenTree::Group(g) => {
+                process_tokens(g.stream().into_iter().peekable(), output, out_id)?;
+            },
             TokenTree::Ident(i) => {
                 if i == "true" || i == "false" {
                     let litbconv = Literal::string(&i.to_string());
@@ -97,32 +99,57 @@ fn process_tokens(
                     continue;
                 }
 
-                if let Some(TokenTree::Group(_)) = tokens.peek() {
-                    let token = tokens.next().unwrap();
+                match tokens.peek() {
+                    Some(TokenTree::Group(_)) => {
+                        let token = tokens.next().unwrap();
 
-                    let TokenTree::Group(g) = token else { unreachable!() };
+                        let TokenTree::Group(g) = token else { unreachable!() };
 
-                    let block_tokens = g.stream().into_iter().peekable();
+                        let block_tokens = g.stream().into_iter().peekable();
 
-                    let opening_tag = Literal::string(&format!("<{i}>"));
-                    let closing_tag = Literal::string(&format!("</{i}>"));
+                        let opening_tag = Literal::string(&format!("<{i}>"));
+                        let closing_tag = Literal::string(&format!("</{i}>"));
 
-                    output.push(quote! {
-                        #out_id.push_str(#opening_tag);
-                    });
+                        output.push(quote! {
+                            #out_id.push_str(#opening_tag);
+                        });
 
-                    process_tokens(block_tokens, output, out_id)?;
+                        process_tokens(block_tokens, output, out_id)?;
 
-                    output.push(quote! {
-                        #out_id.push_str(#closing_tag);
-                    });
-                }
+                        output.push(quote! {
+                            #out_id.push_str(#closing_tag);
+                        });
 
-                // todo!("everything else");
+                        continue;
+                    },
+                    Some(TokenTree::Punct(_)) => {
+                        let TokenTree::Punct(p) = tokens.next().unwrap() else { unreachable!() };
+
+                        match p.as_char() {
+                            ';' => {
+                                let tag = Literal::string(&format!("<{i}>"));
+                                output.push(quote! {
+                                    #out_id.push_str(#tag);
+                                });
+                            }
+                            _ => {
+                                todo!()
+                            }
+                        }
+
+                        continue;
+                    },
+                    None => {
+                            return Err(syn::Error::new(current_span, format!("no rules expected an ident {i} at the end of lfml")));
+                    },
+                    x => println!("{x:?}")
+                };
+
+                panic!("{i} ident wasn't handled");
             }
             TokenTree::Punct(p) => {
-                match p.to_string().as_str() {
-                    "-" => {
+                match p.as_char() {
+                    '-' => {
                         let Some(TokenTree::Literal(l)) = tokens.next() else {
                             return Err(syn::Error::new(current_span, "unexpected token -"));
                         };
@@ -144,7 +171,7 @@ fn process_tokens(
                         }
                     }
                     _ => {
-                        panic!("there");
+                        panic!("{p} wasn't handled");
                     }
                 }
             }
