@@ -24,39 +24,29 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
             return None;
         };
         match meta {
-            Meta::Path(p) => {
-                let Some(pfx) = p.get_ident() else {
-                    return None;
-                };
-                if pfx == "prefix" {
-                    Some("data".to_owned())
-                } else {
-                    None
-                }
-            }
+            Meta::Path(p) => Some(
+                p.get_ident()
+                    .filter(|p| *p == "prefix")
+                    .map(|_| "data".to_owned())?,
+            ),
             Meta::NameValue(MetaNameValue {
-                path,
+                path: p,
                 eq_token: _,
                 value,
             }) => {
-                let Some(pfx) = path.get_ident() else {
+                let Expr::Lit(ExprLit {
+                    attrs: _,
+                    lit: Lit::Str(l),
+                }) = value
+                else {
                     return None;
                 };
 
-                if pfx == "prefix" {
-                    // TODO: it's important that the value is a LitStr
-                    let Expr::Lit(ExprLit {
-                        attrs: _,
-                        lit: Lit::Str(l),
-                    }) = value
-                    else {
-                        return None;
-                    };
-
-                    Some(l.value())
-                } else {
-                    None
-                }
+                Some(
+                    p.get_ident()
+                        .filter(|p| *p == "prefix")
+                        .map(|_| l.value())?,
+                )
             }
             Meta::List(_) => None,
         }
@@ -74,28 +64,24 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         };
         match meta {
             Meta::NameValue(MetaNameValue {
-                path,
+                path: p,
                 eq_token: _,
                 value,
             }) => {
-                let Some(pfx) = path.get_ident() else {
+                // TODO: it's important that the value is a LitStr
+                let Expr::Lit(ExprLit {
+                    attrs: _,
+                    lit: Lit::Str(l),
+                }) = value
+                else {
                     return None;
                 };
 
-                if pfx == "suffix" {
-                    // TODO: it's important that the value is a LitStr
-                    let Expr::Lit(ExprLit {
-                        attrs: _,
-                        lit: Lit::Str(l),
-                    }) = value
-                    else {
-                        return None;
-                    };
-
-                    Some(l.value())
-                } else {
-                    None
-                }
+                Some(
+                    p.get_ident()
+                        .filter(|p| *p == "suffix")
+                        .map(|_| l.value())?,
+                )
             }
             Meta::Path(_) => None,
             Meta::List(_) => None,
@@ -172,19 +158,19 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         ty,
     } in named
     {
+        let ident = ident.as_ref().unwrap();
+
         let is_option_type = if let Type::Path(TypePath { qself: _, path }) = ty {
-            if let Some(ps) = path.segments.iter().last() {
-                ps.ident == "Option"
-            } else {
-                false
-            }
+            path.segments
+                .iter()
+                .last()
+                .filter(|ps| ps.ident == "Option")
+                .is_some()
         } else {
             false
         };
 
-        let ident = ident.as_ref().unwrap();
-
-        let escape_value = attrs.iter().any(|a| {
+        let is_escape_value = attrs.iter().any(|a| {
             if let Attribute {
                 pound_token: _,
                 style: AttrStyle::Outer,
@@ -192,48 +178,36 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                 meta: Meta::Path(path),
             } = a
             {
-                let Some(i) = path.get_ident() else {
-                    return false;
-                };
-
-                i == "escape_value"
+                path.get_ident().filter(|i| *i == "escape_value").is_some()
             } else {
                 false
             }
         });
 
-        let to_attr = if let Some(t) = attrs.iter().find_map(|a| {
+        let field_attr_name = if let Some(t) = attrs.iter().find_map(|a| {
             if let Attribute {
                 pound_token: _,
                 style: AttrStyle::Outer,
                 bracket_token: _,
-                meta,
-            } = a
-            {
-                let Meta::NameValue(MetaNameValue {
+                meta: Meta::NameValue(MetaNameValue {
                     path,
                     eq_token: _,
-                    value,
-                }) = meta
-                else {
-                    return None;
-                };
-                if let Some(p) = path.get_ident() {
-                    if p == "rename" {
-                        let Expr::Lit(ExprLit {
+                    value:
+                        Expr::Lit(ExprLit {
                             attrs: _,
                             lit: Lit::Str(l),
-                        }) = value
-                        else {
-                            return None;
-                        };
-                        return Some(l.value());
-                    }
-                } else {
-                    return None;
-                };
-            };
-            None
+                        }),
+                }),
+            } = a
+            {
+                Some(
+                    path.get_ident()
+                        .filter(|p| *p == "rename")
+                        .map(|_| l.value())?,
+                )
+            } else {
+                None
+            }
         }) {
             t.to_string()
         } else {
@@ -252,12 +226,12 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
             }
         };
 
-        let fmt_attr = format!("{}=\"{{}}\" ", to_attr);
+        let fmt_attr = format!("{}=\"{{}}\" ", field_attr_name);
 
         let fmt_expr = if is_option_type {
             let fmt_attr_lit = LitStr::new(&fmt_attr, ident.span());
 
-            let fmt_value = if escape_value {
+            let fmt_value = if is_escape_value {
                 quote! { lfml::escape_string(&x.to_string()) }
             } else {
                 quote! { &x }
@@ -270,7 +244,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                     "".into()
                 }
             }}
-        } else if escape_value {
+        } else if is_escape_value {
             quote! { lfml::escape_string(&self.#ident.to_string()) }
         } else {
             quote! { self.#ident }
