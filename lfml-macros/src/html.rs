@@ -86,7 +86,20 @@ fn process_tokens(
                 },
             },
             TokenTree::Group(g) => {
-                process_tokens(g.stream().into_iter().peekable(), output, out_id)?;
+                println!("{g:?}");
+                match g.delimiter() {
+                    proc_macro2::Delimiter::Parenthesis => {
+                        let inner = g.stream();
+                        output.push(quote! {
+                            #out_id.push_str(&lfml::escape_string(&{#inner}.to_string()));
+                        });
+                    },
+                    proc_macro2::Delimiter::Brace => {
+                        process_tokens(g.stream().into_iter().peekable(), output, out_id)?;
+                    },
+                    proc_macro2::Delimiter::Bracket => todo!(),
+                    proc_macro2::Delimiter::None => todo!(),
+                }
             },
             TokenTree::Ident(i) => {
                 if i == "true" || i == "false" {
