@@ -147,6 +147,13 @@ fn process_tokens(
                         },
                         Some(TokenTree::Ident(_)) => {
                             let TokenTree::Ident(i) = tokens.next().unwrap() else { unreachable!() };
+                            if i == "true" || i == "false" {
+                                opening_tag.push('"');
+                                opening_tag.push_str(&i.to_string());
+                                opening_tag.push('"');
+
+                                continue 'attrs;
+                            }
                             opening_tag.push(' ');
                             opening_tag.push_str(&i.to_string());
                         },

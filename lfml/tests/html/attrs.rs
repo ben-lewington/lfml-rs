@@ -20,6 +20,17 @@ fn with_value() {
     } => "<a foo=\"bar\"></a>");
 
     assert_html_eq!({
-        a foo=3 {}
-    } => "<a foo=\"3\"></a>");
+        a foo=3 bar=3.5 baz=true bat='a' car=b'a' cat=b"Hello \xF0\x90\x80World" {}
+    } => "<a foo=\"3\" bar=\"3.5\" baz=\"true\" bat=\"a\" car=\"a\" cat=\"Hello �World\"></a>");
+}
+
+#[test]
+fn mix_of_two_types_of_attrs() {
+    assert_html_eq!({
+        a foo="bar" baz {}
+    } => "<a foo=\"bar\" baz></a>");
+
+    assert_html_eq!({
+        a foo bar="baz" {}
+    } => "<a foo bar=\"baz\"></a>");
 }
