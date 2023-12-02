@@ -34,3 +34,18 @@ fn mix_of_two_types_of_attrs() {
         a foo bar="baz" {}
     } => "<a foo bar=\"baz\"></a>");
 }
+
+#[test]
+fn self_closing_tags() {
+    assert_html_eq!({
+        a foo;
+    } => "<a foo>");
+
+    assert_html_eq!({
+        a foo; b {}
+    } => "<a foo><b></b>");
+
+    assert_html_eq!({
+        a foo="bar"; b {}
+    } => "<a foo=\"bar\"><b></b>");
+}

@@ -46,3 +46,8 @@ fn self_closing_tag() {
 
     assert_html_eq!({ "bob" br; "jerry" } => "bob<br>jerry");
 }
+
+#[test]
+fn self_closing_tag_repeated() {
+    assert_html_eq!({ link; link; } => "<link><link>");
+}
