@@ -12,3 +12,14 @@ fn without_value() {
         a foo bar {}
     } => "<a foo bar></a>");
 }
+
+#[test]
+fn with_value() {
+    assert_html_eq!({
+        a foo="bar" {}
+    } => "<a foo=\"bar\"></a>");
+
+    assert_html_eq!({
+        a foo=3 {}
+    } => "<a foo=\"3\"></a>");
+}

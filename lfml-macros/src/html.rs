@@ -133,8 +133,13 @@ fn process_tokens(
                                         #out_id.push_str(#tag);
                                     });
                                 }
-                                _ => {
-                                    todo!()
+                                '=' => {
+                                    opening_tag.push('=');
+
+                                    continue 'attrs;
+                                }
+                                p => {
+                                    todo!("{p}")
                                 }
                             }
 
@@ -144,20 +149,47 @@ fn process_tokens(
                             let TokenTree::Ident(i) = tokens.next().unwrap() else { unreachable!() };
                             opening_tag.push(' ');
                             opening_tag.push_str(&i.to_string());
-                            // println!("{i:?}");
-                            // break 'attrs;
                         },
+                        Some(TokenTree::Literal(_)) => {
+                            let TokenTree::Literal(l) = tokens.next().unwrap() else { unreachable!() };
+                            opening_tag.push('"');
+                            match Lit::new(l) {
+                                Lit::Str(s) => {
+                                    opening_tag.push_str(&s.value());
+                                },
+                                Lit::ByteStr(bs) => {
+                                    opening_tag.push_str(&String::from_utf8_lossy(&bs.value()));
+                                },
+                                Lit::Byte(b) => {
+                                    opening_tag.push(b.value() as char);
+                                },
+                                Lit::Char(c) => {
+                                    opening_tag.push(c.value());
+                                },
+                                Lit::Int(i) => {
+                                    opening_tag.push_str(&i.to_string());
+                                },
+                                Lit::Float(f) => {
+                                    opening_tag.push_str(&f.to_string());
+                                },
+                                Lit::Bool(b) => {
+                                    opening_tag.push_str(&b.value().to_string());
+                                },
+                                _ => {
+                                    return Err(syn::Error::new(
+                                        current_span,
+                                        "unknown token type",
+                                    ));
+                                }
+                            }
+                            opening_tag.push('"');
+                            continue 'attrs;
+                        }
                         None => {
                             return Err(syn::Error::new(current_span, format!("no rules expected ident \"{i}\" at the end of lfml")));
                         },
-                        x => {
-                            println!("{x:?}");
-                            break 'attrs;
-                        }
                     };
                 }
-
-                panic!("ident \"{i}\" wasn't handled");
             }
             TokenTree::Punct(p) => {
                 match p.as_char() {
