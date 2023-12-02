@@ -170,6 +170,7 @@ fn process_tokens(
                             _ => todo!(),
                         }
                     }
+                    ';' => {},
                     _ => {
                         panic!("{p} wasn't handled");
                     }

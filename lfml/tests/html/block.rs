@@ -30,6 +30,19 @@ fn anon_block() {
 }
 
 #[test]
+fn semicolons() {
+    assert_html_eq!({
+        "one";
+        "two";
+        "three";
+        ;;;;;;;;;;;;;;;;;;;;;;;;
+        "four";
+    } => "onetwothreefour");
+}
+
+#[test]
 fn self_closing_tag() {
     assert_html_eq!({ link; } => "<link>");
+
+    assert_html_eq!({ "bob" br; "jerry" } => "bob<br>jerry");
 }
