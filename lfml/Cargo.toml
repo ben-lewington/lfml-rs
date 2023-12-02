@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 lfml-macros = { path = "../lfml-macros" }
 lfml-escape = { path = "../lfml-escape" }
+itoa = "1.0.9"

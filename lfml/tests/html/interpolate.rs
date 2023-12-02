@@ -10,4 +10,13 @@ fn markup_body() {
         (x)
     } => "foobar");
 
+    let x = html! {
+        a {
+            "Foo"
+        }
+    };
+
+    assert_html_eq!({
+        (x)
+    } => "<a>Foo</a>");
 }

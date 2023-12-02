@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use proc_macro2::{token_stream::IntoIter, Ident, Literal, Span, TokenStream, TokenTree};
+use proc_macro2::{token_stream::IntoIter, Ident, Literal, Span, TokenStream, TokenTree, Delimiter};
 use quote::quote;
 use syn::Lit;
 
@@ -86,19 +86,18 @@ fn process_tokens(
                 },
             },
             TokenTree::Group(g) => {
-                println!("{g:?}");
                 match g.delimiter() {
-                    proc_macro2::Delimiter::Parenthesis => {
+                    Delimiter::Parenthesis => {
                         let inner = g.stream();
                         output.push(quote! {
-                            #out_id.push_str(&lfml::escape_string(&{#inner}.to_string()));
+                            #out_id.push_str(&lfml::Escapable::markup(&{#inner}).into_string());
                         });
                     },
-                    proc_macro2::Delimiter::Brace => {
+                    Delimiter::Brace => {
                         process_tokens(g.stream().into_iter().peekable(), output, out_id)?;
                     },
-                    proc_macro2::Delimiter::Bracket => todo!(),
-                    proc_macro2::Delimiter::None => todo!(),
+                    Delimiter::Bracket => todo!(),
+                    Delimiter::None => todo!(),
                 }
             },
             TokenTree::Ident(i) => {
