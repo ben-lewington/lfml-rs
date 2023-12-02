@@ -12,10 +12,9 @@ pub fn generate_markup_expr(
     let out_id = Ident::new("__lfml_output", Span::mixed_site());
     let size_hint = input.to_string().len() * SIZE_MULTIPLIER;
 
-    let tokens = input.clone().into_iter().peekable();
     let mut output = vec![];
 
-    process_tokens(tokens, &mut output, &out_id)?;
+    process_tokens(input.into_iter().peekable(), &mut output, &out_id)?;
 
     Ok(quote! {{
         let mut #out_id = String::with_capacity(#size_hint);
@@ -29,7 +28,7 @@ fn process_tokens(
     output: &mut Vec<TokenStream>,
     out_id: &Ident,
 ) -> syn::Result<()> {
-    while let Some(t) = tokens.next() {
+    'main: while let Some(t) = tokens.next() {
         let current_span = t.span();
         match t {
             TokenTree::Literal(l) => match Lit::new(l) {
@@ -99,53 +98,66 @@ fn process_tokens(
                     continue;
                 }
 
-                match tokens.peek() {
-                    Some(TokenTree::Group(_)) => {
-                        let token = tokens.next().unwrap();
+                let opening_tag = &mut format!("<{i}");
+                let closing_tag = &format!("</{i}>");
 
-                        let TokenTree::Group(g) = token else { unreachable!() };
+                'attrs: loop {
+                    match tokens.peek() {
+                        Some(TokenTree::Group(_)) => {
+                            let TokenTree::Group(g) = tokens.next().unwrap() else { unreachable!() };
 
-                        let block_tokens = g.stream().into_iter().peekable();
+                            let block_tokens = g.stream().into_iter().peekable();
 
-                        let opening_tag = Literal::string(&format!("<{i}>"));
-                        let closing_tag = Literal::string(&format!("</{i}>"));
+                            let opening_tag = Literal::string(&format!("{opening_tag}>"));
+                            let closing_tag = Literal::string(closing_tag);
 
-                        output.push(quote! {
-                            #out_id.push_str(#opening_tag);
-                        });
+                            output.push(quote! {
+                                #out_id.push_str(#opening_tag);
+                            });
 
-                        process_tokens(block_tokens, output, out_id)?;
+                            process_tokens(block_tokens, output, out_id)?;
 
-                        output.push(quote! {
-                            #out_id.push_str(#closing_tag);
-                        });
+                            output.push(quote! {
+                                #out_id.push_str(#closing_tag);
+                            });
 
-                        continue;
-                    },
-                    Some(TokenTree::Punct(_)) => {
-                        let TokenTree::Punct(p) = tokens.next().unwrap() else { unreachable!() };
+                            continue 'main;
+                        },
+                        Some(TokenTree::Punct(_)) => {
+                            let TokenTree::Punct(p) = tokens.next().unwrap() else { unreachable!() };
 
-                        match p.as_char() {
-                            ';' => {
-                                let tag = Literal::string(&format!("<{i}>"));
-                                output.push(quote! {
-                                    #out_id.push_str(#tag);
-                                });
+                            match p.as_char() {
+                                ';' => {
+                                    let tag = Literal::string(&format!("{opening_tag}>"));
+                                    output.push(quote! {
+                                        #out_id.push_str(#tag);
+                                    });
+                                }
+                                _ => {
+                                    todo!()
+                                }
                             }
-                            _ => {
-                                todo!()
-                            }
+
+                            continue 'main;
+                        },
+                        Some(TokenTree::Ident(_)) => {
+                            let TokenTree::Ident(i) = tokens.next().unwrap() else { unreachable!() };
+                            opening_tag.push(' ');
+                            opening_tag.push_str(&i.to_string());
+                            // println!("{i:?}");
+                            // break 'attrs;
+                        },
+                        None => {
+                            return Err(syn::Error::new(current_span, format!("no rules expected ident \"{i}\" at the end of lfml")));
+                        },
+                        x => {
+                            println!("{x:?}");
+                            break 'attrs;
                         }
+                    };
+                }
 
-                        continue;
-                    },
-                    None => {
-                            return Err(syn::Error::new(current_span, format!("no rules expected an ident {i} at the end of lfml")));
-                    },
-                    x => println!("{x:?}")
-                };
-
-                panic!("{i} ident wasn't handled");
+                panic!("ident \"{i}\" wasn't handled");
             }
             TokenTree::Punct(p) => {
                 match p.as_char() {
