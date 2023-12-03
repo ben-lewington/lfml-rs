@@ -20,3 +20,14 @@ fn markup_body() {
         (x)
     } => "<a>Foo</a>");
 }
+
+#[test]
+fn attrs() {
+    let x = "bar";
+
+    assert_html_eq!({
+        a foo=(x) {
+            "Hello"
+        }
+    } => "<a foo=\"bar\">Hello</a>");
+}

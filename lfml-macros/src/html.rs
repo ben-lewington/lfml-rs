@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 
-use proc_macro2::{token_stream::IntoIter, Ident, Literal, Span, TokenStream, TokenTree, Delimiter};
+use proc_macro2::{
+    token_stream::IntoIter, Delimiter, Ident, Literal, Span, TokenStream, TokenTree,
+};
 use quote::quote;
 use syn::Lit;
 
@@ -112,28 +114,51 @@ fn process_tokens(
 
                 let opening_tag = &mut format!("<{i}");
                 let closing_tag = &format!("</{i}>");
+                let mut interp_attrs = vec![];
 
                 'attrs: loop {
                     match tokens.peek() {
                         Some(TokenTree::Group(_)) => {
                             let TokenTree::Group(g) = tokens.next().unwrap() else { unreachable!() };
+                            // println!("{g:?}");
 
-                            let block_tokens = g.stream().into_iter().peekable();
+                            match g.delimiter() {
+                                Delimiter::Parenthesis => {
+                                    let inner = g.stream();
 
-                            let opening_tag = Literal::string(&format!("{opening_tag}>"));
-                            let closing_tag = Literal::string(closing_tag);
+                                    interp_attrs.push(quote! {{
+                                        #inner
+                                    }});
 
-                            output.push(quote! {
-                                #out_id.push_str(#opening_tag);
-                            });
+                                    opening_tag.push_str("\"{}\"");
+                                },
+                                Delimiter::Brace => {
+                                    let opening_tag = Literal::string(&format!("{opening_tag}>"));
+                                    let closing_tag = Literal::string(closing_tag);
 
-                            process_tokens(block_tokens, output, out_id)?;
+                                    let push_opening_expr = if interp_attrs.is_empty() {
+                                        quote! {
+                                            #out_id.push_str(#opening_tag);
+                                        }
+                                    } else {
+                                        quote! {
+                                            #out_id.push_str(&format!(#opening_tag, #(#interp_attrs)*));
+                                        }
+                                    };
 
-                            output.push(quote! {
-                                #out_id.push_str(#closing_tag);
-                            });
+                                    output.push(push_opening_expr);
 
-                            continue 'main;
+                                    process_tokens(g.stream().into_iter().peekable(), output, out_id)?;
+
+                                    output.push(quote! {
+                                        #out_id.push_str(#closing_tag);
+                                    });
+
+                                    continue 'main;
+                                },
+                                Delimiter::Bracket => todo!(),
+                                Delimiter::None => todo!(),
+                            }
                         },
                         Some(TokenTree::Punct(_)) => {
                             let TokenTree::Punct(p) = tokens.next().unwrap() else { unreachable!() };
