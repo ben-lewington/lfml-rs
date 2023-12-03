@@ -10,6 +10,12 @@ fn markup_body() {
         (x)
     } => "foobar");
 
+    let x = 3;
+
+    assert_html_eq!({
+        (x)
+    } => "3");
+
     let x = html! {
         a {
             "Foo"
@@ -30,4 +36,23 @@ fn attrs() {
             "Hello"
         }
     } => "<a foo=\"bar\">Hello</a>");
+
+    let x = 3;
+
+    assert_html_eq!({
+        a foo=(x) {
+            "Hello"
+        }
+    } => "<a foo=\"3\">Hello</a>");
+}
+
+#[test]
+fn attrs_content_is_escaped() {
+    let x = "<danger>";
+
+    assert_html_eq!({
+        a foo=(x) {
+            "Hello"
+        }
+    } => "<a foo=\"&lt;danger&gt;\">Hello</a>");
 }

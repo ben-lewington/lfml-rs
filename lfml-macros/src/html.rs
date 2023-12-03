@@ -126,9 +126,11 @@ fn process_tokens(
                                 Delimiter::Parenthesis => {
                                     let inner = g.stream();
 
-                                    interp_attrs.push(quote! {{
-                                        #inner
-                                    }});
+                                    interp_attrs.push(quote! {
+                                        lfml::escape_string(&{
+                                            #inner
+                                        }.to_string())
+                                    });
 
                                     opening_tag.push_str("\"{}\"");
                                 },
