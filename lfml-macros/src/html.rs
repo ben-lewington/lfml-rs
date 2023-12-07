@@ -92,7 +92,7 @@ fn process_tokens(
                     Delimiter::Parenthesis => {
                         let inner = g.stream();
                         output.push(quote! {
-                            #out_id.push_str(&lfml::Escapable::markup(&{#inner}).into_string());
+                            #out_id.push_str(&lfml::Render::markup(&{#inner}).into_string());
                         });
                     },
                     Delimiter::Brace => {

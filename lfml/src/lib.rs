@@ -13,7 +13,7 @@ impl<T: std::fmt::Display> Escaped<T> {
     }
 }
 
-pub trait Escapable {
+pub trait Render {
     fn markup(&self) -> Escaped<String> {
         let mut buf = String::new();
         self.markup_to_string(&mut buf);
@@ -25,31 +25,31 @@ pub trait Escapable {
     }
 }
 
-impl<T: std::fmt::Display> Escapable for Escaped<T> {
+impl<T: std::fmt::Display> Render for Escaped<T> {
     fn markup_to_string(&self, buf: &mut String) {
         buf.push_str(&self.into_string())
     }
 }
 
-impl Escapable for str {
+impl Render for str {
     fn markup_to_string(&self, buf: &mut String) {
         escape_to_string(self, buf);
     }
 }
 
-impl Escapable for String {
+impl Render for String {
     fn markup_to_string(&self, buf: &mut String) {
         str::markup_to_string(self, buf)
     }
 }
 
-impl<'a, T: Escapable + ?Sized> Escapable for &'a T {
+impl<'a, T: Render + ?Sized> Render for &'a T {
     fn markup_to_string(&self, buf: &mut String) {
         T::markup_to_string(self, buf);
     }
 }
 
-impl<'a, T: Escapable + ?Sized> Escapable for &'a mut T {
+impl<'a, T: Render + ?Sized> Render for &'a mut T {
     fn markup_to_string(&self, buf: &mut String) {
         T::markup_to_string(self, buf);
     }
@@ -58,7 +58,7 @@ impl<'a, T: Escapable + ?Sized> Escapable for &'a mut T {
 macro_rules! impl_render_for_integer_types {
     ($($ty:ty)*) => {
         $(
-            impl Escapable for $ty {
+            impl Render for $ty {
                 fn markup_to_string(&self, w: &mut String) {
                     w.push_str(itoa::Buffer::new().format(*self));
                 }
