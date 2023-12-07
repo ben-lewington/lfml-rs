@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use proc_macro2::{
     token_stream::IntoIter, Delimiter, Ident, Literal, Span, TokenStream, TokenTree,
 };
-use quote::{quote, format_ident};
+use quote::quote;
 use syn::Lit;
 
 const SIZE_MULTIPLIER: usize = 10;
@@ -202,6 +202,21 @@ fn process_tokens(
                                     opening_tag.push('=');
 
                                     continue 'attrs;
+                                }
+                                '@' => {
+                                    match tokens.next() {
+                                        // Some(TokenTree::Group(g)) => todo!(),
+                                        Some(token @ TokenTree::Ident(_)) | Some(token @ TokenTree::Group(_)) => {
+                                            interp_attrs.push(quote! { {
+                                                &lfml::EmbedAsAttrs::raw(&{#token})
+                                            }});
+                                            opening_tag.push_str("{}");
+
+                                            continue 'attrs;
+                                        }
+                                         _ => return Err(syn::Error::new(p.span(), "unsupported use of @"))
+                                    }
+
                                 }
                                 p => {
                                     todo!("{p}")
