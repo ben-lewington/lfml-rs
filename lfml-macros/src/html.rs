@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use proc_macro2::{
     token_stream::IntoIter, Delimiter, Ident, Literal, Span, TokenStream, TokenTree,
 };
-use quote::quote;
+use quote::{quote, format_ident};
 use syn::Lit;
 
 const SIZE_MULTIPLIER: usize = 10;
@@ -113,7 +113,33 @@ fn process_tokens(
                 }
 
                 let opening_tag = &mut format!("<{i}");
-                let closing_tag = &format!("</{i}>");
+                let closing_tag = &mut format!("</{i}");
+
+                if let Some(TokenTree::Punct(p)) = tokens.peek() {
+                    match p.as_char() {
+                        '-' => {
+                            let mut expect_ident = true;
+                            loop {
+                                expect_ident = match tokens.peek() {
+                                    Some(TokenTree::Punct(ref punct)) if punct.as_char() == '-' => {
+                                        let TokenTree::Punct(_) = tokens.next().unwrap() else { unreachable!() };
+                                        true
+                                    }
+                                    Some(TokenTree::Ident(_)) if expect_ident => {
+                                        let TokenTree::Ident(ident) = tokens.next().unwrap() else { unreachable!() };
+                                        opening_tag.push_str(&format!("-{ident}"));
+                                        closing_tag.push_str(&format!("-{ident}"));
+                                        false
+                                    }
+                                    _ => break,
+                                };
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+
+                closing_tag.push_str(">");
                 let mut interp_attrs = vec![];
 
                 'attrs: loop {

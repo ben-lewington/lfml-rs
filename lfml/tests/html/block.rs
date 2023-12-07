@@ -51,3 +51,9 @@ fn self_closing_tag() {
 fn self_closing_tag_repeated() {
     assert_html_eq!({ link; link; } => "<link><link>");
 }
+
+#[test]
+fn idents_with_hyphens_in_names() {
+    // assert!(false);
+    assert_html_eq!({ a- b { "Foo" } } => "<a-b>Foo</a-b>");
+}
