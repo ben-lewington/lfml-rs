@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use proc_macro2::{
     token_stream::IntoIter, Delimiter, Ident, Literal, Span, TokenStream, TokenTree,
 };
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::Lit;
 
 const SIZE_MULTIPLIER: usize = 10;
@@ -92,7 +92,7 @@ fn process_tokens(
                     Delimiter::Parenthesis => {
                         let inner = g.stream();
                         output.push(quote! {
-                            #out_id.push_str(&lfml::Render::markup(&{#inner}).into_string());
+                            #out_id.push_str(&lfml::Render::markup(&{#inner}).as_string());
                         });
                     },
                     Delimiter::Brace => {
@@ -116,30 +116,27 @@ fn process_tokens(
                 let closing_tag = &mut format!("</{i}");
 
                 if let Some(TokenTree::Punct(p)) = tokens.peek() {
-                    match p.as_char() {
-                        '-' => {
-                            let mut expect_ident = true;
-                            loop {
-                                expect_ident = match tokens.peek() {
-                                    Some(TokenTree::Punct(ref punct)) if punct.as_char() == '-' => {
-                                        let TokenTree::Punct(_) = tokens.next().unwrap() else { unreachable!() };
-                                        true
-                                    }
-                                    Some(TokenTree::Ident(_)) if expect_ident => {
-                                        let TokenTree::Ident(ident) = tokens.next().unwrap() else { unreachable!() };
-                                        opening_tag.push_str(&format!("-{ident}"));
-                                        closing_tag.push_str(&format!("-{ident}"));
-                                        false
-                                    }
-                                    _ => break,
-                                };
-                            }
-                        },
-                        _ => {}
+                    if p.as_char() == '-' {
+                        let mut expect_ident = true;
+                        loop {
+                            expect_ident = match tokens.peek() {
+                                Some(TokenTree::Punct(ref punct)) if punct.as_char() == '-' => {
+                                    let TokenTree::Punct(_) = tokens.next().unwrap() else { unreachable!() };
+                                    true
+                                }
+                                Some(TokenTree::Ident(_)) if expect_ident => {
+                                    let TokenTree::Ident(ident) = tokens.next().unwrap() else { unreachable!() };
+                                    opening_tag.push_str(&format!("-{ident}"));
+                                    closing_tag.push_str(&format!("-{ident}"));
+                                    false
+                                }
+                                _ => break,
+                            };
+                        }
                     }
                 }
 
-                closing_tag.push_str(">");
+                closing_tag.push('>');
                 let mut interp_attrs = vec![];
 
                 'attrs: loop {
@@ -170,7 +167,7 @@ fn process_tokens(
                                         }
                                     } else {
                                         quote! {
-                                            #out_id.push_str(&format!(#opening_tag, #(#interp_attrs)*));
+                                            #out_id.push_str(&format!(#opening_tag, #(#interp_attrs),*));
                                         }
                                     };
 
@@ -207,8 +204,10 @@ fn process_tokens(
                                     match tokens.next() {
                                         // Some(TokenTree::Group(g)) => todo!(),
                                         Some(token @ TokenTree::Ident(_)) | Some(token @ TokenTree::Group(_)) => {
+
+                                            let impl_id = format_ident!("__lfml_tag_{i}");
                                             interp_attrs.push(quote! { {
-                                                &lfml::EmbedAsAttrs::raw(&{#token})
+                                                {&#token}.#impl_id()
                                             }});
                                             opening_tag.push_str("{}");
 
@@ -311,3 +310,113 @@ fn process_tokens(
     }
     Ok(())
 }
+
+pub(crate) static VALID_HTML5_TAGS: &[&str] = &[
+    "a",
+    "abbr",
+    "address",
+    "area",
+    "article",
+    "aside",
+    "audio",
+    "b",
+    "base",
+    "bdi",
+    "bdo",
+    "blink",
+    "blockquote",
+    "body",
+    "br",
+    "button",
+    "canvas",
+    "caption",
+    "cite",
+    "code",
+    "col",
+    "colgroup",
+    "data",
+    "datalist",
+    "dd",
+    "del",
+    "details",
+    "dfn",
+    "div",
+    "dl",
+    "dt",
+    "em",
+    "embed",
+    "fieldset",
+    "figcaption",
+    "figure",
+    "footer",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "head",
+    "header",
+    "hgroup",
+    "hr",
+    "html",
+    "i",
+    "iframe",
+    "img",
+    "input",
+    "ins",
+    "kbd",
+    "label",
+    "legend",
+    "li",
+    "link",
+    "main",
+    "map",
+    "mark",
+    "marquee",
+    "meta",
+    "meter",
+    "nav",
+    "noscript",
+    "object",
+    "ol",
+    "optgroup",
+    "option",
+    "output",
+    "p",
+    "param",
+    "pre",
+    "progress",
+    "q",
+    "ruby",
+    "s",
+    "samp",
+    "script",
+    "section",
+    "select",
+    "small",
+    "source",
+    "span",
+    "strong",
+    "style",
+    "sub",
+    "summary",
+    "sup",
+    "table",
+    "tbody",
+    "td",
+    "template",
+    "textarea",
+    "tfoot",
+    "th",
+    "thead",
+    "time",
+    "title",
+    "tr",
+    "track",
+    "ul",
+    "var",
+    "video",
+    "wbr",
+];

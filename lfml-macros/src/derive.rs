@@ -1,8 +1,11 @@
-use quote::quote;
+use proc_macro2::Ident;
+use quote::{format_ident, quote};
 use syn::{
     AttrStyle, Attribute, Data, DataStruct, DeriveInput, Expr, ExprLit, Field, Fields, FieldsNamed,
-    GenericParam, Lit, LitStr, Meta, MetaNameValue, Type, TypeParam, TypePath,
+    GenericParam, Lit, LitStr, Meta, MetaList, MetaNameValue, Type, TypeParam, TypePath,
 };
+
+use crate::html::VALID_HTML5_TAGS;
 
 pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let DeriveInput {
@@ -23,6 +26,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         else {
             return None;
         };
+
         match meta {
             Meta::Path(p) => Some(
                 p.get_ident()
@@ -88,6 +92,65 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         }
     });
 
+    let tags = attrs
+        .iter()
+        .find_map(|a| {
+            let Attribute {
+                pound_token: _,
+                style: AttrStyle::Outer,
+                bracket_token: _,
+                meta,
+            } = a
+            else {
+                return None;
+            };
+            match meta {
+                Meta::List(MetaList {
+                    path: p,
+                    delimiter: _,
+                    tokens,
+                }) => {
+                    p.get_ident().filter(|p| *p == "tags")?;
+
+                    Some(
+                        tokens
+                            .clone()
+                            .into_iter()
+                            .filter_map(|t| {
+                                let proc_macro2::TokenTree::Ident(i) = t else {
+                                    return None;
+                                };
+
+                                let impl_i = format_ident!("__lfml_tag_{i}");
+                                Some(quote! {
+                                    fn #impl_i(&self) -> String {
+                                        lfml::MarkupAttrs::raw(&self)
+                                    }
+                                })
+                            })
+                            .collect::<Vec<_>>(),
+                    )
+                }
+                Meta::Path(_) => None,
+                _ => None,
+            }
+        })
+        .unwrap_or(
+            VALID_HTML5_TAGS
+                .iter()
+                .map(|t| {
+                    let i = Ident::new(t, struct_ident.span());
+
+                    let impl_i = format_ident!("__lfml_tag_{i}");
+                    quote! {
+                        fn #impl_i(&self) -> String {
+                            lfml::MarkupAttrs::raw(&self)
+                        }
+                    }
+                })
+                .collect(),
+        );
+
     let disp_where: Vec<proc_macro2::TokenStream> = generics
         .params
         .iter()
@@ -108,7 +171,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         })
         .collect();
 
-    // TODO: for any type parameters, when we implement EmbedAsAttrs, we will need to add a
+    // TODO: for any type parameters, when we implement MarkupAttrs, we will need to add a
     // core::fmt::Display trait bound
     let (impl_generics, impl_ty, impl_where) = generics.split_for_impl();
 
@@ -122,7 +185,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         // handle them
         return Err(syn::Error::new(
             struct_ident.span(),
-            "Currently only structs with named fields can derive EmbedAsAttrs.",
+            "Currently only structs with named fields can derive MarkupAttrs.",
         ));
     };
 
@@ -133,7 +196,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
     else {
         return Err(syn::Error::new(
             struct_ident.span(),
-            "Currently only structs with named fields can derive EmbedAsAttrs",
+            "Currently only structs with named fields can derive MarkupAttrs",
         ));
     };
 
@@ -260,10 +323,14 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
 
     Ok(quote! {
         #[automatically_derived]
-        impl #impl_generics lfml::EmbedAsAttrs for #struct_ident #impl_ty #impl_where #(#disp_where),* {
+        impl #impl_generics lfml::MarkupAttrs for #struct_ident #impl_ty #impl_where #(#disp_where),* {
             fn raw(&self) -> String {
                 format!(#fmt_str, #(#fields_pfx),*)
             }
+        }
+
+        impl #impl_generics #struct_ident #impl_ty #impl_where #(#disp_where),* {
+            #(#tags)*
         }
     })
 }
