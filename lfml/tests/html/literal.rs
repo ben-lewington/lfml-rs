@@ -1,7 +1,5 @@
 use crate::assert_html_eq;
 
-use lfml::html;
-
 #[test]
 fn string() {
     assert_html_eq!({ "du\tcks" } => "du\tcks");

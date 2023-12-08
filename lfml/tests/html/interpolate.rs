@@ -1,7 +1,5 @@
 use crate::assert_html_eq;
 
-use lfml::html;
-
 #[test]
 fn markup_body() {
     let x = "foobar";
@@ -16,7 +14,7 @@ fn markup_body() {
         (x)
     } => "3");
 
-    let x = html! {
+    let x = lfml::html! {
         a {
             "Foo"
         }
