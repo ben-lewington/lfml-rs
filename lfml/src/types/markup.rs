@@ -1,16 +1,7 @@
-mod types;
-
-pub use crate::types::attrs::MarkupAttrs;
-
-pub use lfml_escape::{escape_string, escape_to_string};
-pub use lfml_macros::{html, MarkupAttrs};
-
 pub struct Escaped<T>(pub T);
 
-pub type Markup = Escaped<String>;
-
 impl<T: std::fmt::Display> Escaped<T> {
-    pub fn into_string(&self) -> String {
+    pub fn as_string(&self) -> String {
         self.0.to_string()
     }
 }
@@ -23,19 +14,19 @@ pub trait Render {
     }
 
     fn markup_to_string(&self, buf: &mut String) {
-        buf.push_str(&self.markup().into_string())
+        buf.push_str(&self.markup().as_string())
     }
 }
 
 impl<T: std::fmt::Display> Render for Escaped<T> {
     fn markup_to_string(&self, buf: &mut String) {
-        buf.push_str(&self.into_string())
+        buf.push_str(&self.as_string())
     }
 }
 
 impl Render for str {
     fn markup_to_string(&self, buf: &mut String) {
-        escape_to_string(self, buf);
+        lfml_escape::escape_to_string(self, buf);
     }
 }
 
