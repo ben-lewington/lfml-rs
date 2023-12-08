@@ -112,7 +112,6 @@ fn embed_option_type_with_toggle_syntax() {
         }
     } => "<a target=\".main\">A</a>");
 
-
     let x: Option<Foo<'_>> = None;
 
     assert_html_eq!({

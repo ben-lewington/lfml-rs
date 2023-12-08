@@ -222,6 +222,82 @@ fn process_tokens(
                                     }
 
                                 }
+                                t @ '.' | t @ '#' => {
+                                    let attr_name = if t == '.' {
+                                        "class"
+                                    } else {
+                                        "id"
+                                    };
+                                    match tokens.next() {
+                                        Some(TokenTree::Group(ref g)) if g.delimiter() == Delimiter::Bracket => {
+                                            let token = g.stream();
+
+                                            let litstr = Literal::string(&format!(" {}=\"{{}}\"", attr_name));
+
+                                            interp_attrs.push(quote! { {
+                                                if let Some(inner) = {&#token} {
+                                                    format!(#litstr, inner)
+                                                } else {
+                                                    "".into()
+                                                }
+                                            }});
+
+                                            opening_tag.push_str("{}");
+
+                                            continue 'attrs;
+                                        }
+                                        Some(TokenTree::Group(g)) => {
+                                            let tokens = g.stream();
+                                            let litstr = Literal::string(&format!(" {}=\"{{}}\"", attr_name));
+
+                                            interp_attrs.push(quote! { {
+                                                format!(#litstr, {&#tokens})
+                                            }});
+
+                                            opening_tag.push_str("{}");
+
+                                            continue 'attrs;
+                                        }
+                                        Some(TokenTree::Ident(i)) => {
+                                            opening_tag.push_str(&format!(" {}=\"{}\"", attr_name, i));
+                                        }
+                                        Some(TokenTree::Literal(l)) => {
+                                            opening_tag.push_str(&format!(" {}=\"", attr_name));
+                                            match Lit::new(l) {
+                                                Lit::Str(s) => {
+                                                    opening_tag.push_str(&s.value());
+                                                },
+                                                Lit::ByteStr(bs) => {
+                                                    opening_tag.push_str(&String::from_utf8_lossy(&bs.value()));
+                                                },
+                                                Lit::Byte(b) => {
+                                                    opening_tag.push(b.value() as char);
+                                                },
+                                                Lit::Char(c) => {
+                                                    opening_tag.push(c.value());
+                                                },
+                                                Lit::Int(i) => {
+                                                    opening_tag.push_str(&i.to_string());
+                                                },
+                                                Lit::Float(f) => {
+                                                    opening_tag.push_str(&f.to_string());
+                                                },
+                                                Lit::Bool(b) => {
+                                                    opening_tag.push_str(&b.value().to_string());
+                                                },
+                                                _ => {
+                                                    return Err(syn::Error::new(
+                                                        current_span,
+                                                        "unknown token type",
+                                                    ));
+                                                }
+                                            }
+                                            opening_tag.push('"');
+                                            continue 'attrs;
+                                        }
+                                        _ => return Err(syn::Error::new(p.span(), "unsupported use of ."))
+                                    }
+                                }
                                 ';' => {
                                     let tag = Literal::string(&format!("{opening_tag}>"));
 

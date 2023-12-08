@@ -3,3 +3,4 @@ mod block;
 mod embed;
 mod interpolate;
 mod literal;
+mod shorthand;
