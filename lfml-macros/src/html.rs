@@ -143,7 +143,6 @@ fn process_tokens(
                     match tokens.peek() {
                         Some(TokenTree::Group(_)) => {
                             let TokenTree::Group(g) = tokens.next().unwrap() else { unreachable!() };
-                            // println!("{g:?}");
 
                             match g.delimiter() {
                                 Delimiter::Parenthesis => {
@@ -189,17 +188,6 @@ fn process_tokens(
                             let TokenTree::Punct(p) = tokens.next().unwrap() else { unreachable!() };
 
                             match p.as_char() {
-                                ';' => {
-                                    let tag = Literal::string(&format!("{opening_tag}>"));
-                                    output.push(quote! {
-                                        #out_id.push_str(#tag);
-                                    });
-                                }
-                                '=' => {
-                                    opening_tag.push('=');
-
-                                    continue 'attrs;
-                                }
                                 '@' => {
                                     match tokens.next() {
                                         // Some(TokenTree::Group(g)) => todo!(),
@@ -217,12 +205,19 @@ fn process_tokens(
                                     }
 
                                 }
+                                ';' => {
+                                    let tag = Literal::string(&format!("{opening_tag}>"));
+
+                                    output.push(quote! {
+                                        #out_id.push_str(#tag);
+                                    });
+
+                                    continue 'main;
+                                },
                                 p => {
                                     todo!("{p}")
                                 }
                             }
-
-                            continue 'main;
                         },
                         Some(TokenTree::Ident(_)) => {
                             let TokenTree::Ident(i) = tokens.next().unwrap() else { unreachable!() };
@@ -233,8 +228,83 @@ fn process_tokens(
 
                                 continue 'attrs;
                             }
-                            opening_tag.push(' ');
-                            opening_tag.push_str(&i.to_string());
+
+                            match tokens.peek() {
+                                Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Bracket => {
+                                    let Some(TokenTree::Group(g)) = tokens.next() else { unreachable!() };
+
+
+                                    let litstr = Literal::string(&format!(" {i}"));
+
+                                    let inner = g.stream();
+
+                                    interp_attrs.push(quote! {
+                                        if { #inner } {
+                                            #litstr
+                                        } else {
+                                            ""
+                                        }
+                                    });
+
+                                    opening_tag.push_str("{}");
+
+                                    continue 'attrs;
+                                }
+                                Some(TokenTree::Punct(p)) if p.as_char() == ';' => {
+                                    opening_tag.push(' ');
+                                    opening_tag.push_str(&i.to_string());
+
+                                    let tag = Literal::string(&format!("{opening_tag}>"));
+
+                                    output.push(quote! {
+                                        #out_id.push_str(#tag);
+                                    });
+
+                                    continue 'main;
+                                },
+                                Some(TokenTree::Punct(p)) if p.as_char() == '=' => {
+                                    let Some(TokenTree::Punct(_)) = tokens.next() else { unreachable!() };
+
+                                    if let Some(TokenTree::Group(g)) = tokens.peek() {
+                                        if let Delimiter::Bracket = g.delimiter() {
+                                            let Some(TokenTree::Group(g)) = tokens.next() else { unreachable!() };
+
+                                            let inner = g.stream();
+
+                                            let litstr = Literal::string(&format!(" {}=\"{{}}\"", i));
+
+                                            interp_attrs.push(quote! {
+                                                if let Some(e) = { #inner } {
+                                                    format!(#litstr, e)
+                                                } else {
+                                                    "".into()
+                                                }
+                                            });
+
+                                            opening_tag.push_str("{}");
+
+                                            continue 'attrs;
+                                        } else {
+                                            opening_tag.push(' ');
+                                            opening_tag.push_str(&i.to_string());
+                                            opening_tag.push('=');
+
+                                            continue 'attrs;
+                                        }
+                                    } else {
+                                        opening_tag.push(' ');
+                                        opening_tag.push_str(&i.to_string());
+                                        opening_tag.push('=');
+
+                                        continue 'attrs;
+                                    }
+                                },
+                                _ => {
+                                        opening_tag.push(' ');
+                                        opening_tag.push_str(&i.to_string());
+                                        continue 'attrs;
+                                }
+                            }
                         },
                         Some(TokenTree::Literal(_)) => {
                             let TokenTree::Literal(l) = tokens.next().unwrap() else { unreachable!() };
