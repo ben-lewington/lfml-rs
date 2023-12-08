@@ -208,8 +208,6 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
             + 1,
     );
 
-    format_string.push(' ');
-
     let mut fields_pfx = Vec::with_capacity(named.iter().count());
 
     for Field {
@@ -290,7 +288,7 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
             }
         };
 
-        let fmt_attr = format!("{}=\"{{}}\" ", field_attr_name);
+        let fmt_attr = format!(" {}=\"{{}}\"", field_attr_name);
 
         let fmt_expr = if is_option_type {
             let fmt_attr_lit = LitStr::new(&fmt_attr, ident.span());

@@ -191,12 +191,29 @@ fn process_tokens(
                                 '@' => {
                                     match tokens.next() {
                                         // Some(TokenTree::Group(g)) => todo!(),
-                                        Some(token @ TokenTree::Ident(_)) | Some(token @ TokenTree::Group(_)) => {
-
+                                        Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Bracket => {
+                                            let inner = g.stream();
                                             let impl_id = format_ident!("__lfml_tag_{i}");
+
+                                            interp_attrs.push(quote! { {
+                                                if let Some(inner) = {&#inner} {
+                                                    inner.#impl_id()
+                                                } else {
+                                                    "".into()
+                                                }
+                                            }});
+
+                                            opening_tag.push_str("{}");
+
+                                            continue 'attrs;
+                                        }
+                                        Some(token @ TokenTree::Ident(_)) | Some(token @ TokenTree::Group(_)) => {
+                                            let impl_id = format_ident!("__lfml_tag_{i}");
+
                                             interp_attrs.push(quote! { {
                                                 {&#token}.#impl_id()
                                             }});
+
                                             opening_tag.push_str("{}");
 
                                             continue 'attrs;

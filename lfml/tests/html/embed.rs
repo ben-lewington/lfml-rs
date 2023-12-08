@@ -20,7 +20,7 @@ fn basic() {
 
     assert_html_eq!({
         a@x { "A" }
-    } => "<a hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\" >A</a>");
+    } => "<a hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</a>");
 
     assert_html_eq!({
         div@{
@@ -32,7 +32,7 @@ fn basic() {
         } {
             "A"
         }
-    } => "<div hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\" >A</div>");
+    } => "<div hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</div>");
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn restrict_attribute() {
 
     assert_html_eq!({
         a@x { "A" }
-    } => "<a hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\" >A</a>");
+    } => "<a hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</a>");
 
     assert_html_eq!({
         b@{
@@ -66,15 +66,15 @@ fn restrict_attribute() {
         } {
             "A"
         }
-    } => "<b hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\" >A</b>");
+    } => "<b hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</b>");
 
     assert_html_eq!({
         c@x { "A" }
-    } => "<c hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\" >A</c>");
+    } => "<c hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</c>");
 }
 
 #[test]
-fn can_embed_multiple_structs_on_valid_tag() {
+fn embed_multiple_structs_on_valid_tag() {
     #[derive(MarkupAttrs)]
     #[tags(a)]
     struct Foo<'a> {
@@ -93,5 +93,31 @@ fn can_embed_multiple_structs_on_valid_tag() {
         a @( Foo { target: ".main" } ) @x {
             "A"
         }
-    } => "<a target=\".main\"  get=\"/\" >A</a>");
+    } => "<a target=\".main\" get=\"/\">A</a>");
+}
+
+#[test]
+fn embed_option_type_with_toggle_syntax() {
+    #[derive(MarkupAttrs)]
+    #[tags(a)]
+    struct Foo<'a> {
+        target: &'a str,
+    }
+
+    let x = Some(Foo { target: ".main" });
+
+    assert_html_eq!({
+        a @[x] {
+            "A"
+        }
+    } => "<a target=\".main\">A</a>");
+
+
+    let x: Option<Foo<'_>> = None;
+
+    assert_html_eq!({
+        a @[x] {
+            "A"
+        }
+    } => "<a>A</a>");
 }

@@ -10,7 +10,7 @@ fn basic() {
 
     let y = A { foo: 0, bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"0\" bar=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo=\"0\" bar=\"a\"");
 }
 
 #[test]
@@ -25,7 +25,7 @@ fn escape_values() {
         bar: "<a></a>".into(),
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), " bar=\"&lt;a&gt;&lt;/a&gt;\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " bar=\"&lt;a&gt;&lt;/a&gt;\"");
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn global_prefix() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" data-bar=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" data-bar=\"a\"");
 
     #[derive(MarkupAttrs)]
     #[prefix = "x-data"]
@@ -50,7 +50,7 @@ fn global_prefix() {
 
     let y = B { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " x-data-foo=\"a\" x-data-bar=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " x-data-foo=\"a\" x-data-bar=\"a\"");
 }
 
 #[test]
@@ -64,7 +64,7 @@ fn global_suffix() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"a\"");
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn rename_field() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" baz=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" baz=\"a\"");
 }
 
 #[test]
@@ -93,7 +93,7 @@ fn rename_overrides_prefix_and_suffix() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" baz=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" baz=\"a\"");
 
     #[derive(MarkupAttrs)]
     #[suffix = "attr"]
@@ -105,7 +105,7 @@ fn rename_overrides_prefix_and_suffix() {
 
     let y = B { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" baz=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" baz=\"a\"");
 }
 
 #[test]
@@ -122,7 +122,7 @@ fn global_prefix_and_suffix() {
 
     assert_eq!(
         MarkupAttrs::raw(&y),
-        " data-foo-attr=\"a\" data-bar-attr=\"a\" "
+        " data-foo-attr=\"a\" data-bar-attr=\"a\""
     );
 
     #[derive(MarkupAttrs)]
@@ -137,7 +137,7 @@ fn global_prefix_and_suffix() {
 
     assert_eq!(
         MarkupAttrs::raw(&y),
-        " x-data-foo-attr=\"a\" x-data-bar-attr=\"a\" "
+        " x-data-foo-attr=\"a\" x-data-bar-attr=\"a\""
     );
 }
 
@@ -153,7 +153,7 @@ fn blanda_uppa() {
 
     let y = A { foo: "a", bar: "<" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"&lt;\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"&lt;\"");
 
     #[derive(MarkupAttrs)]
     #[prefix]
@@ -165,7 +165,7 @@ fn blanda_uppa() {
 
     let y = B { foo: "a", bar: "<" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" data-bar=\"&lt;\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" data-bar=\"&lt;\"");
 
     #[derive(MarkupAttrs)]
     #[prefix]
@@ -180,7 +180,7 @@ fn blanda_uppa() {
 
     assert_eq!(
         MarkupAttrs::raw(&y),
-        " data-foo-attr=\"a\" data-bar-attr=\"&lt;\" "
+        " data-foo-attr=\"a\" data-bar-attr=\"&lt;\""
     );
 }
 
@@ -205,21 +205,21 @@ fn option_fields_are_handled() {
         bar: None,
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\"");
 
     let y = A {
         foo: None,
         bar: None,
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), " ");
+    assert_eq!(MarkupAttrs::raw(&y), "");
 
     let y = A {
         foo: Some("a".into()),
         bar: Some(0),
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" bar=\"0\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" bar=\"0\"");
 }
 
 #[test]
@@ -231,7 +231,7 @@ fn option_fields_work_with_generics() {
 
     let y = B { foo: Some("a") };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\"");
 }
 
 #[test]
@@ -244,5 +244,5 @@ fn option_fields_can_be_escaped() {
 
     let y = A { foo: Some("<") };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"&lt;\" ");
+    assert_eq!(MarkupAttrs::raw(&y), " foo=\"&lt;\"");
 }
