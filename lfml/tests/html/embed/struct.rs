@@ -19,17 +19,17 @@ fn basic() {
     };
 
     assert_html_eq!({
-        a@x { "A" }
+        a@(x) { "A" }
     } => "<a hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</a>");
 
     assert_html_eq!({
-        div@{
+        div@(
             HxGet {
                 get: "/a",
                 target: ".main",
                 swap: "outerHTML",
             }
-        } {
+        ) {
             "A"
         }
     } => "<div hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</div>");
@@ -53,23 +53,23 @@ fn restrict_attribute() {
     };
 
     assert_html_eq!({
-        a@x { "A" }
+        a@(x) { "A" }
     } => "<a hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</a>");
 
     assert_html_eq!({
-        b@{
+        b@(
             HxGet {
                 get: "/a",
                 target: ".main",
                 swap: "outerHTML",
             }
-        } {
+        ) {
             "A"
         }
     } => "<b hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</b>");
 
     assert_html_eq!({
-        c@x { "A" }
+        c@(x) { "A" }
     } => "<c hx-get=\"/a\" hx-target=\".main\" hx-swap=\"outerHTML\">A</c>");
 }
 
@@ -90,7 +90,7 @@ fn embed_multiple_structs_on_valid_tag() {
     let x = Bar { get: "/" };
 
     assert_html_eq!({
-        a @( Foo { target: ".main" } ) @x {
+        a @( Foo { target: ".main" } ) @(x) {
             "A"
         }
     } => "<a target=\".main\" get=\"/\">A</a>");
