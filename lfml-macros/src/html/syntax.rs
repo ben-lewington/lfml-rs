@@ -16,38 +16,36 @@ pub enum MarkupSyntax {
 #[derive(Debug, Clone)]
 pub enum MarkupAttrSyntax {
     Single {
-        key_ident: MarkupIdent,
+        name: MarkupIdent,
     },
     Static {
-        key_ident: MarkupIdent,
+        name: MarkupIdent,
         value: MarkupLiteral,
     },
     Interpolate {
-        block: proc_macro2::TokenStream,
-        r#type: AttrInterpType,
+        value: proc_macro2::TokenStream,
+        r#type: Interp,
     },
 }
 
 #[derive(Debug, Clone)]
-pub enum AttrInterpType {
-    Single {
-        ident: MarkupIdent,
-        transform: AttrInterpTransform,
+pub enum Interp {
+    Toggle {
+        name: MarkupIdent,
     },
     KeyValue {
-        ident: MarkupIdent,
-        transform: AttrInterpTransform,
+        name: MarkupIdent,
+        unwrap: InterpUnwrap,
     },
     Spread {
         tag: MarkupIdent,
-        transform: AttrInterpTransform,
+        unwrap: InterpUnwrap,
     },
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum AttrInterpTransform {
+pub enum InterpUnwrap {
     None,
-    Bool,
     Option,
 }
 

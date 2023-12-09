@@ -1,7 +1,7 @@
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 
-use super::syntax::{MarkupAttrSyntax, MarkupSyntax, AttrInterpType, AttrInterpTransform};
+use super::syntax::{Interp, InterpUnwrap, MarkupAttrSyntax, MarkupSyntax};
 
 pub fn markup_as_string_push_operations(
     buffer_id: &Ident,
@@ -34,82 +34,73 @@ pub fn markup_as_string_push_operations(
 
                 for attr in attrs {
                     match attr {
-                        MarkupAttrSyntax::Single { key_ident } => {
+                        MarkupAttrSyntax::Single { name } => {
                             opening_tag.push(' ');
-                            opening_tag.push_str(&key_ident.to_string());
+                            opening_tag.push_str(&name.to_string());
                         }
-                        MarkupAttrSyntax::Static { key_ident, value } => {
-                            opening_tag.push_str(&format!(" {}=\"", key_ident));
+                        MarkupAttrSyntax::Static { name, value } => {
+                            opening_tag.push_str(&format!(" {}=\"", name));
                             value.push_to_string(&mut opening_tag)?;
                             opening_tag.push('"');
                         }
-                        MarkupAttrSyntax::Interpolate { block, r#type } => match r#type {
-                            AttrInterpType::Single { ident, transform } => {
-                                match transform {
-                                    AttrInterpTransform::Bool => {
-                                        let litstr = Literal::string(&format!(" {ident}"));
-                                        interp_attrs.push(quote! {
-                                            if { #block } {
-                                                #litstr
-                                            } else {
-                                                ""
-                                            }
-                                        });
-                                        opening_tag.push_str("{}");
-
-                                    },
-                                    _ => unreachable!(),
-                                }
-                            }
-                            AttrInterpType::KeyValue { ident, transform } => {
-                                match transform {
-                                    AttrInterpTransform::None => {
-                                        interp_attrs.push(quote! {
-                                            lfml::escape_string(&{
-                                                #block
-                                            }.to_string())
-                                        });
-                                        opening_tag.push_str(&format!(" {}=\"{{}}\"", ident));
+                        MarkupAttrSyntax::Interpolate { value, r#type } => match r#type {
+                            Interp::Toggle { name } => {
+                                let litstr = Literal::string(&format!(" {name}"));
+                                interp_attrs.push(quote! {
+                                    if { #value } {
+                                        #litstr
+                                    } else {
+                                        ""
                                     }
-                                    AttrInterpTransform::Option => {
-                                        let litstr = Literal::string(&format!(" {}=\"{{}}\"", ident));
-
-                                        interp_attrs.push(quote! {
-                                            if let Some(e) = { #block } {
-                                                format!(#litstr, e)
-                                            } else {
-                                                "".into()
-                                            }
-                                        });
-
-                                        opening_tag.push_str("{}");
-                                    },
-                                    AttrInterpTransform::Bool => unreachable!(),
-                                }
+                                });
+                                opening_tag.push_str("{}");
                             }
-                            AttrInterpType::Spread { tag, transform } => {
-                                let ensure_tag = format_ident!("__lfml_tag_{tag}");
-                                match transform {
-                                    AttrInterpTransform::None => {
+                            Interp::KeyValue { name, unwrap } => match unwrap {
+                                InterpUnwrap::None => {
+                                    interp_attrs.push(quote! {
+                                        lfml::escape_string(&{
+                                            #value
+                                        }.to_string())
+                                    });
+                                    opening_tag.push_str(&format!(" {}=\"{{}}\"", name));
+                                }
+                                InterpUnwrap::Option => {
+                                    let litstr = Literal::string(&format!(" {}=\"{{}}\"", name));
+
+                                    interp_attrs.push(quote! {
+                                        if let Some(e) = { #value } {
+                                            format!(#litstr, e)
+                                        } else {
+                                            "".into()
+                                        }
+                                    });
+
+                                    opening_tag.push_str("{}");
+                                }
+                            },
+                            Interp::Spread { tag, unwrap } => {
+                                let tag = format_ident!("__lfml_tag_{tag}");
+                                match unwrap {
+                                    InterpUnwrap::None => {
                                         interp_attrs.push(quote! { {
-                                            { &#block }.#ensure_tag()
+                                            { &#value }.#tag()
                                         }});
-                                    },
-                                    AttrInterpTransform::Option => {
+                                    }
+                                    InterpUnwrap::Option => {
                                         interp_attrs.push(quote! { {
-                                            if let Some(i) = { &#block } {
-                                                i.#ensure_tag()
+                                            if let Some(i) = { &#value } {
+                                                i.#tag()
                                             } else {
                                                 "".into()
                                             }
                                         }});
-                                    },
-                                    AttrInterpTransform::Bool => unreachable!(),
+                                    }
                                 }
 
                                 opening_tag.push_str("{}");
                             }
-                        },                     }
+                        },
+                    }
                 }
 
                 opening_tag.push('>');

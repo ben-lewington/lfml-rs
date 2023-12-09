@@ -3,7 +3,7 @@ use crate::html::syntax::{MarkupAttrSyntax, MarkupIdent, MarkupSyntax};
 use proc_macro2::{Delimiter, Ident, Literal, TokenStream, TokenTree};
 use syn::Lit;
 
-use super::syntax::{AttrInterpTransform, AttrInterpType, MarkupLiteral};
+use super::syntax::{Interp, InterpUnwrap, MarkupLiteral};
 
 pub struct LfmlParser(pub proc_macro2::token_stream::IntoIter);
 
@@ -139,7 +139,7 @@ impl LfmlParser {
         self.0.next()
     }
 
-    fn peek_2_tokens(&self) -> (Option<TokenTree>, Option<TokenTree>) {
+    fn peek_2(&self) -> (Option<TokenTree>, Option<TokenTree>) {
         let mut ts = self.0.clone();
         let x0 = ts.next();
         let x1 = ts.next();
@@ -206,7 +206,7 @@ impl LfmlParser {
     }
 
     fn parse_literal(&mut self) -> syn::Result<Option<MarkupLiteral>> {
-        match self.peek_2_tokens() {
+        match self.peek_2() {
             (Some(TokenTree::Literal(l)), _) => {
                 self.advance();
                 Ok(Some(MarkupLiteral::Basic(l)))
@@ -240,7 +240,7 @@ impl LfmlParser {
     ) -> syn::Result<(Vec<MarkupAttrSyntax>, Option<TokenStream>)> {
         let mut output = vec![];
         loop {
-            match self.peek_2_tokens() {
+            match self.peek_2() {
                 (Some(TokenTree::Punct(p)), _) if p.as_char() == ';' => {
                     self.advance();
                     return Ok((output, None));
@@ -252,16 +252,16 @@ impl LfmlParser {
                 (Some(TokenTree::Ident(_)), _) => {
                     let ident = self.parse_ident()?;
                     'attr: loop {
-                        match self.peek_2_tokens() {
+                        match self.peek_2() {
                             (Some(TokenTree::Punct(p)), Some(TokenTree::Group(g)))
                                 if p.as_char() == '='
                                     && g.delimiter() == Delimiter::Parenthesis =>
                             {
                                 output.push(MarkupAttrSyntax::Interpolate {
-                                    block: g.stream(),
-                                    r#type: AttrInterpType::KeyValue {
-                                        ident: ident.clone(),
-                                        transform: AttrInterpTransform::None,
+                                    value: g.stream(),
+                                    r#type: Interp::KeyValue {
+                                        name: ident.clone(),
+                                        unwrap: InterpUnwrap::None,
                                     },
                                 });
                                 self.advance_2();
@@ -271,10 +271,10 @@ impl LfmlParser {
                                 if p.as_char() == '=' && g.delimiter() == Delimiter::Bracket =>
                             {
                                 output.push(MarkupAttrSyntax::Interpolate {
-                                    block: g.stream(),
-                                    r#type: AttrInterpType::KeyValue {
-                                        ident: ident.clone(),
-                                        transform: AttrInterpTransform::Option,
+                                    value: g.stream(),
+                                    r#type: Interp::KeyValue {
+                                        name: ident.clone(),
+                                        unwrap: InterpUnwrap::Option,
                                     },
                                 });
                                 self.advance_2();
@@ -291,7 +291,7 @@ impl LfmlParser {
                                 };
 
                                 output.push(MarkupAttrSyntax::Static {
-                                    key_ident: ident.clone(),
+                                    name: ident.clone(),
                                     value: l,
                                 });
 
@@ -301,7 +301,7 @@ impl LfmlParser {
                                 self.advance();
 
                                 output.push(MarkupAttrSyntax::Single {
-                                    key_ident: ident.clone(),
+                                    name: ident.clone(),
                                 });
 
                                 return Ok((output, None));
@@ -310,10 +310,9 @@ impl LfmlParser {
                                 if g.delimiter() == Delimiter::Bracket =>
                             {
                                 output.push(MarkupAttrSyntax::Interpolate {
-                                    block: g.stream(),
-                                    r#type: AttrInterpType::Single {
-                                        ident: ident.clone(),
-                                        transform: AttrInterpTransform::Bool,
+                                    value: g.stream(),
+                                    r#type: Interp::Toggle {
+                                        name: ident.clone(),
                                     },
                                 });
 
@@ -322,14 +321,14 @@ impl LfmlParser {
                             }
                             (Some(TokenTree::Group(g)), _) if g.delimiter() == Delimiter::Brace => {
                                 output.push(MarkupAttrSyntax::Single {
-                                    key_ident: ident.clone(),
+                                    name: ident.clone(),
                                 });
                                 self.advance();
                                 return Ok((output, Some(g.stream())));
                             }
                             (Some(TokenTree::Ident(_)), _) => {
                                 output.push(MarkupAttrSyntax::Single {
-                                    key_ident: ident.clone(),
+                                    name: ident.clone(),
                                 });
                                 break 'attr;
                             }
@@ -343,45 +342,45 @@ impl LfmlParser {
                 {
                     output.push(match (p.as_char(), g.delimiter()) {
                         ('.', Delimiter::Parenthesis) => MarkupAttrSyntax::Interpolate {
-                            block: g.stream(),
-                            r#type: AttrInterpType::KeyValue {
-                                ident: MarkupIdent::Basic(Ident::new("class", p.span())),
-                                transform: AttrInterpTransform::None,
+                            value: g.stream(),
+                            r#type: Interp::KeyValue {
+                                name: MarkupIdent::Basic(Ident::new("class", p.span())),
+                                unwrap: InterpUnwrap::None,
                             },
                         },
                         ('.', Delimiter::Bracket) => MarkupAttrSyntax::Interpolate {
-                            block: g.stream(),
-                            r#type: AttrInterpType::KeyValue {
-                                ident: MarkupIdent::Basic(Ident::new("class", p.span())),
-                                transform: AttrInterpTransform::Option,
+                            value: g.stream(),
+                            r#type: Interp::KeyValue {
+                                name: MarkupIdent::Basic(Ident::new("class", p.span())),
+                                unwrap: InterpUnwrap::Option,
                             },
                         },
                         ('#', Delimiter::Parenthesis) => MarkupAttrSyntax::Interpolate {
-                            block: g.stream(),
-                            r#type: AttrInterpType::KeyValue {
-                                ident: MarkupIdent::Basic(Ident::new("id", p.span())),
-                                transform: AttrInterpTransform::None,
+                            value: g.stream(),
+                            r#type: Interp::KeyValue {
+                                name: MarkupIdent::Basic(Ident::new("id", p.span())),
+                                unwrap: InterpUnwrap::None,
                             },
                         },
                         ('#', Delimiter::Bracket) => MarkupAttrSyntax::Interpolate {
-                            block: g.stream(),
-                            r#type: AttrInterpType::KeyValue {
-                                ident: MarkupIdent::Basic(Ident::new("id", p.span())),
-                                transform: AttrInterpTransform::Option,
+                            value: g.stream(),
+                            r#type: Interp::KeyValue {
+                                name: MarkupIdent::Basic(Ident::new("id", p.span())),
+                                unwrap: InterpUnwrap::Option,
                             },
                         },
                         ('@', Delimiter::Parenthesis) => MarkupAttrSyntax::Interpolate {
-                            block: g.stream(),
-                            r#type: AttrInterpType::Spread {
+                            value: g.stream(),
+                            r#type: Interp::Spread {
                                 tag: tag_ident.clone(),
-                                transform: AttrInterpTransform::None,
+                                unwrap: InterpUnwrap::None,
                             },
                         },
                         ('@', Delimiter::Bracket) => MarkupAttrSyntax::Interpolate {
-                            block: g.stream(),
-                            r#type: AttrInterpType::Spread {
+                            value: g.stream(),
+                            r#type: Interp::Spread {
                                 tag: tag_ident.clone(),
-                                transform: AttrInterpTransform::Option,
+                                unwrap: InterpUnwrap::Option,
                             },
                         },
                         _ => {
@@ -403,7 +402,7 @@ impl LfmlParser {
                     let attr_name = if p.as_char() == '.' { "class" } else { "id" };
 
                     output.push(MarkupAttrSyntax::Static {
-                        key_ident: MarkupIdent::Basic(Ident::new(attr_name, p.span())),
+                        name: MarkupIdent::Basic(Ident::new(attr_name, p.span())),
                         value: MarkupLiteral::Basic(Literal::string(&i.to_string())),
                     });
                 }
@@ -414,7 +413,7 @@ impl LfmlParser {
                     };
                     let attr_name = if p.as_char() == '.' { "class" } else { "id" };
                     output.push(MarkupAttrSyntax::Static {
-                        key_ident: MarkupIdent::Basic(Ident::new(attr_name, p.span())),
+                        name: MarkupIdent::Basic(Ident::new(attr_name, p.span())),
                         value: l,
                     })
                 }
