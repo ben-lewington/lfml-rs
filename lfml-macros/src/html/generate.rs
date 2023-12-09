@@ -1,16 +1,18 @@
+use crate::html::syntax::{Interpolate, InterpolateWrapper, Markup, MarkupAttr};
+
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{format_ident, quote, TokenStreamExt};
 
-use super::syntax::{Interp, InterpUnwrap, MarkupAttrSyntax, MarkupSyntax};
+
 
 pub fn markup_as_string_push_operations(
     buffer_id: &Ident,
-    input: Vec<MarkupSyntax>,
+    input: Vec<Markup>,
     output: &mut TokenStream,
 ) -> syn::Result<()> {
     for markup in input {
         match markup {
-            MarkupSyntax::LiteralSequence(ls) => {
+            Markup::LiteralSequence(ls) => {
                 let mut lit_concat = String::new();
                 for l in ls {
                     l.push_to_string(&mut lit_concat)?;
@@ -22,7 +24,7 @@ pub fn markup_as_string_push_operations(
                     #buffer_id.push_str(#litstr);
                 });
             }
-            MarkupSyntax::MarkupTag {
+            Markup::MarkupTag {
                 ident,
                 attrs,
                 inner,
@@ -34,17 +36,17 @@ pub fn markup_as_string_push_operations(
 
                 for attr in attrs {
                     match attr {
-                        MarkupAttrSyntax::Single { name } => {
+                        MarkupAttr::Single { name } => {
                             opening_tag.push(' ');
                             opening_tag.push_str(&name.to_string());
                         }
-                        MarkupAttrSyntax::Static { name, value } => {
+                        MarkupAttr::Static { name, value } => {
                             opening_tag.push_str(&format!(" {}=\"", name));
                             value.push_to_string(&mut opening_tag)?;
                             opening_tag.push('"');
                         }
-                        MarkupAttrSyntax::Interpolate { value, r#type } => match r#type {
-                            Interp::Toggle { name } => {
+                        MarkupAttr::Interpolate { value, r#type } => match r#type {
+                            Interpolate::Toggle { name } => {
                                 let litstr = Literal::string(&format!(" {name}"));
                                 interp_attrs.push(quote! {
                                     if { #value } {
@@ -55,8 +57,8 @@ pub fn markup_as_string_push_operations(
                                 });
                                 opening_tag.push_str("{}");
                             }
-                            Interp::KeyValue { name, unwrap } => match unwrap {
-                                InterpUnwrap::None => {
+                            Interpolate::NameValue { name, wrapper } => match wrapper {
+                                InterpolateWrapper::None => {
                                     interp_attrs.push(quote! {
                                         lfml::escape_string(&{
                                             #value
@@ -64,7 +66,7 @@ pub fn markup_as_string_push_operations(
                                     });
                                     opening_tag.push_str(&format!(" {}=\"{{}}\"", name));
                                 }
-                                InterpUnwrap::Option => {
+                                InterpolateWrapper::Option => {
                                     let litstr = Literal::string(&format!(" {}=\"{{}}\"", name));
 
                                     interp_attrs.push(quote! {
@@ -78,15 +80,15 @@ pub fn markup_as_string_push_operations(
                                     opening_tag.push_str("{}");
                                 }
                             },
-                            Interp::Spread { tag, unwrap } => {
+                            Interpolate::Spread { tag, wrapper } => {
                                 let tag = format_ident!("__lfml_tag_{tag}");
-                                match unwrap {
-                                    InterpUnwrap::None => {
+                                match wrapper {
+                                    InterpolateWrapper::None => {
                                         interp_attrs.push(quote! { {
                                             { &#value }.#tag()
                                         }});
                                     }
-                                    InterpUnwrap::Option => {
+                                    InterpolateWrapper::Option => {
                                         interp_attrs.push(quote! { {
                                             if let Some(i) = { &#value } {
                                                 i.#tag()
@@ -129,10 +131,10 @@ pub fn markup_as_string_push_operations(
                     })
                 }
             }
-            MarkupSyntax::AnonBlock(b) => {
+            Markup::AnonBlock(b) => {
                 markup_as_string_push_operations(buffer_id, b, output)?;
             }
-            MarkupSyntax::Interpolated(i) => {
+            Markup::Interpolated(i) => {
                 output.append_all(quote! {
                     #buffer_id.push_str(&lfml::Render::markup(&{#i}).as_string());
                 });

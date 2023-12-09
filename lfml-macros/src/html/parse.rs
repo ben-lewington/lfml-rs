@@ -1,14 +1,14 @@
-use crate::html::syntax::{MarkupAttrSyntax, MarkupIdent, MarkupSyntax};
+use crate::html::syntax::{
+    Interpolate, InterpolateWrapper, Markup, MarkupAttr, MarkupId, MarkupLit,
+};
 
 use proc_macro2::{Delimiter, Ident, Literal, TokenStream, TokenTree};
 use syn::Lit;
 
-use super::syntax::{Interp, InterpUnwrap, MarkupLiteral};
-
 pub struct LfmlParser(pub proc_macro2::token_stream::IntoIter);
 
 impl Iterator for LfmlParser {
-    type Item = syn::Result<MarkupSyntax>;
+    type Item = syn::Result<Markup>;
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -20,7 +20,7 @@ impl Iterator for LfmlParser {
                             return Some(Err(e));
                         }
                     };
-                    return Some(Ok(MarkupSyntax::LiteralSequence(ls)));
+                    return Some(Ok(Markup::LiteralSequence(ls)));
                 }
                 Some(TokenTree::Ident(i)) if i == "true" || i == "false" => {
                     let ls = match self.parse_literal_seq() {
@@ -29,7 +29,7 @@ impl Iterator for LfmlParser {
                             return Some(Err(e));
                         }
                     };
-                    return Some(Ok(MarkupSyntax::LiteralSequence(ls)));
+                    return Some(Ok(Markup::LiteralSequence(ls)));
                 }
                 Some(TokenTree::Ident(_)) => {
                     let ident = match self.parse_ident() {
@@ -56,7 +56,7 @@ impl Iterator for LfmlParser {
                         None
                     };
 
-                    return Some(Ok(MarkupSyntax::MarkupTag {
+                    return Some(Ok(Markup::MarkupTag {
                         ident,
                         attrs,
                         inner,
@@ -72,16 +72,16 @@ impl Iterator for LfmlParser {
                             Err(e) => return Some(Err(e)),
                         }
                     }
-                    return Some(Ok(MarkupSyntax::AnonBlock(inner)));
+                    return Some(Ok(Markup::AnonBlock(inner)));
                 }
                 Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Parenthesis => {
                     self.advance();
 
-                    return Some(Ok(MarkupSyntax::Interpolated(g.stream())));
+                    return Some(Ok(Markup::Interpolated(g.stream())));
                 }
                 Some(TokenTree::Punct(p)) => match p.as_char() {
                     '@' | '.' | '#' => {
-                        let (attrs, inner) = match self.parse_attrs(&MarkupIdent::Unnamed) {
+                        let (attrs, inner) = match self.parse_attrs(&MarkupId::Unnamed) {
                             Ok(a) => a,
                             Err(e) => return Some(Err(e)),
                         };
@@ -100,8 +100,8 @@ impl Iterator for LfmlParser {
                             None
                         };
 
-                        return Some(Ok(MarkupSyntax::MarkupTag {
-                            ident: MarkupIdent::Unnamed,
+                        return Some(Ok(Markup::MarkupTag {
+                            ident: MarkupId::Unnamed,
                             attrs,
                             inner,
                         }));
@@ -111,7 +111,7 @@ impl Iterator for LfmlParser {
                             Ok(ls) => ls,
                             Err(e) => return Some(Err(e)),
                         };
-                        return Some(Ok(MarkupSyntax::LiteralSequence(ls)));
+                        return Some(Ok(Markup::LiteralSequence(ls)));
                     }
                     ';' => {
                         self.advance();
@@ -151,7 +151,7 @@ impl LfmlParser {
         self.0.next();
     }
 
-    fn parse_literal_seq(&mut self) -> syn::Result<Vec<MarkupLiteral>> {
+    fn parse_literal_seq(&mut self) -> syn::Result<Vec<MarkupLit>> {
         let mut inner = vec![];
 
         loop {
@@ -170,7 +170,7 @@ impl LfmlParser {
         Ok(inner)
     }
 
-    fn parse_ident(&mut self) -> syn::Result<MarkupIdent> {
+    fn parse_ident(&mut self) -> syn::Result<MarkupId> {
         let Some(TokenTree::Ident(i)) = self.advance() else {
             unreachable!()
         };
@@ -199,17 +199,17 @@ impl LfmlParser {
         };
 
         if thr.is_empty() {
-            Ok(MarkupIdent::Basic(i))
+            Ok(MarkupId::Basic(i))
         } else {
-            Ok(MarkupIdent::Complex(format!("{i}{thr}")))
+            Ok(MarkupId::Complex(format!("{i}{thr}")))
         }
     }
 
-    fn parse_literal(&mut self) -> syn::Result<Option<MarkupLiteral>> {
+    fn parse_literal(&mut self) -> syn::Result<Option<MarkupLit>> {
         match self.peek_2() {
             (Some(TokenTree::Literal(l)), _) => {
                 self.advance();
-                Ok(Some(MarkupLiteral::Basic(l)))
+                Ok(Some(MarkupLit::Basic(l)))
             }
             (Some(TokenTree::Punct(p)), Some(TokenTree::Literal(l))) if p.as_char() == '-' => {
                 let s =
@@ -224,11 +224,11 @@ impl LfmlParser {
 
                 self.advance_2();
 
-                Ok(Some(MarkupLiteral::NegativeNumber(Literal::string(&s))))
+                Ok(Some(MarkupLit::NegativeNumber(Literal::string(&s))))
             }
             (Some(TokenTree::Ident(i)), _) if i == "true" || i == "false" => {
                 self.advance();
-                Ok(Some(MarkupLiteral::Basic(Literal::string(&i.to_string()))))
+                Ok(Some(MarkupLit::Basic(Literal::string(&i.to_string()))))
             }
             _ => Ok(None),
         }
@@ -236,8 +236,8 @@ impl LfmlParser {
 
     fn parse_attrs(
         &mut self,
-        tag_ident: &MarkupIdent,
-    ) -> syn::Result<(Vec<MarkupAttrSyntax>, Option<TokenStream>)> {
+        tag_ident: &MarkupId,
+    ) -> syn::Result<(Vec<MarkupAttr>, Option<TokenStream>)> {
         let mut output = vec![];
         loop {
             match self.peek_2() {
@@ -257,11 +257,11 @@ impl LfmlParser {
                                 if p.as_char() == '='
                                     && g.delimiter() == Delimiter::Parenthesis =>
                             {
-                                output.push(MarkupAttrSyntax::Interpolate {
+                                output.push(MarkupAttr::Interpolate {
                                     value: g.stream(),
-                                    r#type: Interp::KeyValue {
+                                    r#type: Interpolate::NameValue {
                                         name: ident.clone(),
-                                        unwrap: InterpUnwrap::None,
+                                        wrapper: InterpolateWrapper::None,
                                     },
                                 });
                                 self.advance_2();
@@ -270,11 +270,11 @@ impl LfmlParser {
                             (Some(TokenTree::Punct(p)), Some(TokenTree::Group(g)))
                                 if p.as_char() == '=' && g.delimiter() == Delimiter::Bracket =>
                             {
-                                output.push(MarkupAttrSyntax::Interpolate {
+                                output.push(MarkupAttr::Interpolate {
                                     value: g.stream(),
-                                    r#type: Interp::KeyValue {
+                                    r#type: Interpolate::NameValue {
                                         name: ident.clone(),
-                                        unwrap: InterpUnwrap::Option,
+                                        wrapper: InterpolateWrapper::Option,
                                     },
                                 });
                                 self.advance_2();
@@ -290,7 +290,7 @@ impl LfmlParser {
                                     ));
                                 };
 
-                                output.push(MarkupAttrSyntax::Static {
+                                output.push(MarkupAttr::Static {
                                     name: ident.clone(),
                                     value: l,
                                 });
@@ -300,7 +300,7 @@ impl LfmlParser {
                             (Some(TokenTree::Punct(p)), _) if p.as_char() == ';' => {
                                 self.advance();
 
-                                output.push(MarkupAttrSyntax::Single {
+                                output.push(MarkupAttr::Single {
                                     name: ident.clone(),
                                 });
 
@@ -309,9 +309,9 @@ impl LfmlParser {
                             (Some(TokenTree::Group(g)), _)
                                 if g.delimiter() == Delimiter::Bracket =>
                             {
-                                output.push(MarkupAttrSyntax::Interpolate {
+                                output.push(MarkupAttr::Interpolate {
                                     value: g.stream(),
-                                    r#type: Interp::Toggle {
+                                    r#type: Interpolate::Toggle {
                                         name: ident.clone(),
                                     },
                                 });
@@ -320,14 +320,14 @@ impl LfmlParser {
                                 break 'attr;
                             }
                             (Some(TokenTree::Group(g)), _) if g.delimiter() == Delimiter::Brace => {
-                                output.push(MarkupAttrSyntax::Single {
+                                output.push(MarkupAttr::Single {
                                     name: ident.clone(),
                                 });
                                 self.advance();
                                 return Ok((output, Some(g.stream())));
                             }
                             (Some(TokenTree::Ident(_)), _) => {
-                                output.push(MarkupAttrSyntax::Single {
+                                output.push(MarkupAttr::Single {
                                     name: ident.clone(),
                                 });
                                 break 'attr;
@@ -341,46 +341,46 @@ impl LfmlParser {
                     if p.as_char() == '.' || p.as_char() == '#' || p.as_char() == '@' =>
                 {
                     output.push(match (p.as_char(), g.delimiter()) {
-                        ('.', Delimiter::Parenthesis) => MarkupAttrSyntax::Interpolate {
+                        ('.', Delimiter::Parenthesis) => MarkupAttr::Interpolate {
                             value: g.stream(),
-                            r#type: Interp::KeyValue {
-                                name: MarkupIdent::Basic(Ident::new("class", p.span())),
-                                unwrap: InterpUnwrap::None,
+                            r#type: Interpolate::NameValue {
+                                name: MarkupId::Basic(Ident::new("class", p.span())),
+                                wrapper: InterpolateWrapper::None,
                             },
                         },
-                        ('.', Delimiter::Bracket) => MarkupAttrSyntax::Interpolate {
+                        ('.', Delimiter::Bracket) => MarkupAttr::Interpolate {
                             value: g.stream(),
-                            r#type: Interp::KeyValue {
-                                name: MarkupIdent::Basic(Ident::new("class", p.span())),
-                                unwrap: InterpUnwrap::Option,
+                            r#type: Interpolate::NameValue {
+                                name: MarkupId::Basic(Ident::new("class", p.span())),
+                                wrapper: InterpolateWrapper::Option,
                             },
                         },
-                        ('#', Delimiter::Parenthesis) => MarkupAttrSyntax::Interpolate {
+                        ('#', Delimiter::Parenthesis) => MarkupAttr::Interpolate {
                             value: g.stream(),
-                            r#type: Interp::KeyValue {
-                                name: MarkupIdent::Basic(Ident::new("id", p.span())),
-                                unwrap: InterpUnwrap::None,
+                            r#type: Interpolate::NameValue {
+                                name: MarkupId::Basic(Ident::new("id", p.span())),
+                                wrapper: InterpolateWrapper::None,
                             },
                         },
-                        ('#', Delimiter::Bracket) => MarkupAttrSyntax::Interpolate {
+                        ('#', Delimiter::Bracket) => MarkupAttr::Interpolate {
                             value: g.stream(),
-                            r#type: Interp::KeyValue {
-                                name: MarkupIdent::Basic(Ident::new("id", p.span())),
-                                unwrap: InterpUnwrap::Option,
+                            r#type: Interpolate::NameValue {
+                                name: MarkupId::Basic(Ident::new("id", p.span())),
+                                wrapper: InterpolateWrapper::Option,
                             },
                         },
-                        ('@', Delimiter::Parenthesis) => MarkupAttrSyntax::Interpolate {
+                        ('@', Delimiter::Parenthesis) => MarkupAttr::Interpolate {
                             value: g.stream(),
-                            r#type: Interp::Spread {
+                            r#type: Interpolate::Spread {
                                 tag: tag_ident.clone(),
-                                unwrap: InterpUnwrap::None,
+                                wrapper: InterpolateWrapper::None,
                             },
                         },
-                        ('@', Delimiter::Bracket) => MarkupAttrSyntax::Interpolate {
+                        ('@', Delimiter::Bracket) => MarkupAttr::Interpolate {
                             value: g.stream(),
-                            r#type: Interp::Spread {
+                            r#type: Interpolate::Spread {
                                 tag: tag_ident.clone(),
-                                unwrap: InterpUnwrap::Option,
+                                wrapper: InterpolateWrapper::Option,
                             },
                         },
                         _ => {
@@ -401,9 +401,9 @@ impl LfmlParser {
 
                     let attr_name = if p.as_char() == '.' { "class" } else { "id" };
 
-                    output.push(MarkupAttrSyntax::Static {
-                        name: MarkupIdent::Basic(Ident::new(attr_name, p.span())),
-                        value: MarkupLiteral::Basic(Literal::string(&i.to_string())),
+                    output.push(MarkupAttr::Static {
+                        name: MarkupId::Basic(Ident::new(attr_name, p.span())),
+                        value: MarkupLit::Basic(Literal::string(&i.to_string())),
                     });
                 }
                 (Some(TokenTree::Punct(p)), _) if p.as_char() == '.' || p.as_char() == '#' => {
@@ -412,8 +412,8 @@ impl LfmlParser {
                         return Err(syn::Error::new(p.span(), "unable to parse literal"));
                     };
                     let attr_name = if p.as_char() == '.' { "class" } else { "id" };
-                    output.push(MarkupAttrSyntax::Static {
-                        name: MarkupIdent::Basic(Ident::new(attr_name, p.span())),
+                    output.push(MarkupAttr::Static {
+                        name: MarkupId::Basic(Ident::new(attr_name, p.span())),
                         value: l,
                     })
                 }

@@ -171,8 +171,6 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         })
         .collect();
 
-    // TODO: for any type parameters, when we implement MarkupAttrs, we will need to add a
-    // core::fmt::Display trait bound
     let (impl_generics, impl_ty, impl_where) = generics.split_for_impl();
 
     let Data::Struct(DataStruct {
