@@ -1,1 +1,1 @@
-mod raw_attrs;
+mod r#struct;
