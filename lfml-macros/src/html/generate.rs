@@ -1,9 +1,9 @@
 use crate::html::syntax::{Interpolate, InterpolateWrapper, Markup, MarkupAttr};
 
 use proc_macro2::{Ident, Literal, TokenStream};
-use quote::{format_ident, quote, TokenStreamExt};
+use quote::{quote, TokenStreamExt};
 
-
+use super::syntax::MarkupId;
 
 pub fn markup_as_string_push_operations(
     buffer_id: &Ident,
@@ -24,26 +24,22 @@ pub fn markup_as_string_push_operations(
                     #buffer_id.push_str(#litstr);
                 });
             }
-            Markup::MarkupTag {
-                ident,
-                attrs,
-                inner,
-            } => {
+            Markup::Tag { tag, attrs, inner } => {
                 let mut opening_tag = String::from("<");
                 let mut interp_attrs = vec![];
 
-                opening_tag.push_str(&ident.to_string());
+                opening_tag.push_str(&tag.to_string());
 
                 for attr in attrs {
                     match attr {
-                        MarkupAttr::Single { name } => {
+                        MarkupAttr::Lit { name, value } => {
                             opening_tag.push(' ');
                             opening_tag.push_str(&name.to_string());
-                        }
-                        MarkupAttr::Static { name, value } => {
-                            opening_tag.push_str(&format!(" {}=\"", name));
-                            value.push_to_string(&mut opening_tag)?;
-                            opening_tag.push('"');
+                            if let Some(v) = value {
+                                opening_tag.push_str("=\"");
+                                v.push_to_string(&mut opening_tag)?;
+                                opening_tag.push('\"');
+                            }
                         }
                         MarkupAttr::Interpolate { value, r#type } => match r#type {
                             Interpolate::Toggle { name } => {
@@ -81,17 +77,19 @@ pub fn markup_as_string_push_operations(
                                 }
                             },
                             Interpolate::Spread { tag, wrapper } => {
-                                let tag = format_ident!("__lfml_tag_{tag}");
+                                let MarkupId::Basic(tag) = tag else {
+                                    todo!("spreading for tags containing hyphens");
+                                };
                                 match wrapper {
                                     InterpolateWrapper::None => {
                                         interp_attrs.push(quote! { {
-                                            { &#value }.#tag()
+                                            { &#value }.__lfml_tags().#tag()
                                         }});
                                     }
                                     InterpolateWrapper::Option => {
                                         interp_attrs.push(quote! { {
                                             if let Some(i) = { &#value } {
-                                                i.#tag()
+                                                i.__lfml_tags().#tag()
                                             } else {
                                                 "".into()
                                             }
@@ -122,7 +120,7 @@ pub fn markup_as_string_push_operations(
                 });
 
                 if let Some(inner) = inner {
-                    let close = Literal::string(&format!("</{}>", ident));
+                    let close = Literal::string(&format!("</{}>", tag));
 
                     markup_as_string_push_operations(buffer_id, inner, output)?;
 

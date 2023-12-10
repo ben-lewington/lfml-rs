@@ -5,7 +5,7 @@ mod syntax;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
-use self::{generate::markup_as_string_push_operations, parse::LfmlParser};
+use self::{generate::markup_as_string_push_operations, parse::LfmlParser, syntax::MarkupId};
 
 const SIZE_MULTIPLIER: usize = 5;
 const OUT_ID: &str = "__lfml_output";
@@ -13,6 +13,10 @@ const UNNAMED_TAG: &str = "div";
 
 fn output_ident() -> Ident {
     Ident::new(OUT_ID, Span::mixed_site())
+}
+
+fn unnamed_tag_ident() -> MarkupId {
+    MarkupId::Basic(Ident::new(UNNAMED_TAG, Span::mixed_site()))
 }
 
 pub fn generate_markup_expr(

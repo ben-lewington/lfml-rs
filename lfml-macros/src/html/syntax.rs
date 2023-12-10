@@ -1,32 +1,30 @@
 use proc_macro2::Span;
+use quote::ToTokens;
 use syn::Lit;
 
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum Markup {
     LiteralSequence(Vec<MarkupLit>),
-    MarkupTag {
-        ident: MarkupId,
+    Tag {
+        tag: MarkupId,
         attrs: Vec<MarkupAttr>,
         inner: Option<Vec<Markup>>,
     },
     AnonBlock(Vec<Markup>),
-    Interpolated(proc_macro2::TokenStream),
+    Interpolated(External),
 }
 
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum MarkupAttr {
-    Single {
+    Lit {
         name: MarkupId,
-    },
-    Static {
-        name: MarkupId,
-        value: MarkupLit,
+        value: Option<MarkupLit>,
     },
     Interpolate {
         r#type: Interpolate,
-        value: proc_macro2::TokenStream,
+        value: External,
     },
 }
 
@@ -56,9 +54,8 @@ pub enum InterpolateWrapper {
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum MarkupId {
-    Unnamed,
     Basic(proc_macro2::Ident),
-    Complex(String),
+    Complex(proc_macro2::Ident, String),
 }
 
 #[non_exhaustive]
@@ -68,17 +65,25 @@ pub enum MarkupLit {
     NegativeNumber(proc_macro2::Literal),
 }
 
+#[derive(Debug, Clone)]
+pub struct External(pub proc_macro2::TokenStream);
+
+impl ToTokens for External {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        self.0.to_tokens(tokens);
+    }
+}
+
 impl core::fmt::Display for MarkupId {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                MarkupId::Unnamed => crate::html::UNNAMED_TAG.into(),
-                MarkupId::Basic(b) => b.to_string(),
-                MarkupId::Complex(c) => c.to_owned(),
+        match self {
+            MarkupId::Basic(b) => write!(f, "{}", b)?,
+            MarkupId::Complex(b, c) => {
+                write!(f, "{}", b)?;
+                write!(f, "{}", c)?;
             }
-        )
+        }
+        Ok(())
     }
 }
 

@@ -116,15 +116,14 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
                         tokens
                             .clone()
                             .into_iter()
-                            .filter_map(|t| {
-                                let proc_macro2::TokenTree::Ident(i) = t else {
+                            .filter_map(|tag| {
+                                let proc_macro2::TokenTree::Ident(tag) = tag else {
                                     return None;
                                 };
 
-                                let impl_i = format_ident!("__lfml_tag_{i}");
                                 Some(quote! {
-                                    fn #impl_i(&self) -> String {
-                                        lfml::MarkupAttrs::raw(&self)
+                                    fn #tag(&self) -> String {
+                                        lfml::MarkupAttrs::raw(&self.0)
                                     }
                                 })
                             })
@@ -138,13 +137,12 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
         .unwrap_or(
             VALID_HTML5_TAGS
                 .iter()
-                .map(|t| {
-                    let i = Ident::new(t, struct_ident.span());
+                .map(|tag| {
+                    let tag = Ident::new(tag, struct_ident.span());
 
-                    let impl_i = format_ident!("__lfml_tag_{i}");
                     quote! {
-                        fn #impl_i(&self) -> String {
-                            lfml::MarkupAttrs::raw(&self)
+                        fn #tag(&self) -> String {
+                            lfml::MarkupAttrs::raw(&self.0)
                         }
                     }
                 })
@@ -317,6 +315,8 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
 
     let fmt_str = LitStr::new(&format_string, struct_ident.span());
 
+    let tag_wrapper = format_ident!("{struct_ident}Tags");
+
     Ok(quote! {
         #[automatically_derived]
         impl #impl_generics lfml::MarkupAttrs for #struct_ident #impl_ty #impl_where #(#disp_where),* {
@@ -325,8 +325,16 @@ pub fn expand_embed_as_attrs(input: &syn::DeriveInput) -> syn::Result<proc_macro
             }
         }
 
-        impl #impl_generics #struct_ident #impl_ty #impl_where #(#disp_where),* {
+        pub struct #tag_wrapper<T>(pub T);
+
+        impl #impl_generics #tag_wrapper< &#struct_ident #impl_ty > #impl_where #(#disp_where),* {
             #(#tags)*
+        }
+
+        impl #impl_generics #struct_ident #impl_ty #impl_where #(#disp_where),* {
+            fn __lfml_tags(&self) -> #tag_wrapper< &#struct_ident #impl_ty > {
+                #tag_wrapper (self)
+            }
         }
     })
 }
