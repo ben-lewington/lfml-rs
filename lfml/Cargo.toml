@@ -9,3 +9,9 @@ edition = "2021"
 lfml-macros = { path = "../lfml-macros" }
 lfml-escape = { path = "../lfml-escape" }
 itoa = "1.0.9"
+axum-core = { version = "0.4.1", optional = true }
+http = { version = "1.0.0", optional = true}
+
+[features]
+default = ["axum"]
+axum = ["axum-core", "http"]

@@ -1,11 +1,10 @@
 [workspace]
 members = [
-    "lfml",
-    "lfml-macros",
-    "lfml-escape",
+    "lfml-static-site",
 ]
 exclude = [
     "examples"
 ]
 resolver = "2"
+
 
