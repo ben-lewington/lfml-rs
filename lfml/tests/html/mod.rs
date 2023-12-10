@@ -1,6 +1,6 @@
 mod attrs;
 mod block;
-mod embed;
+mod spread;
 mod interpolate;
 mod literal;
 mod shorthand;

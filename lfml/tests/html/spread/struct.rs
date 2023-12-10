@@ -90,14 +90,14 @@ fn embed_multiple_structs_on_valid_tag() {
     let x = Bar { get: "/" };
 
     assert_html_eq!({
-        a @( Foo { target: ".main" } ) @(x) {
+        a @(Foo { target: ".main" }) @(x) {
             "A"
         }
     } => "<a target=\".main\" get=\"/\">A</a>");
 }
 
 #[test]
-fn embed_option_type_with_toggle_syntax() {
+fn option_type_with_toggle_syntax() {
     #[derive(MarkupAttrs)]
     #[tags(a)]
     struct Foo<'a> {
