@@ -74,7 +74,7 @@ fn restrict_attribute() {
 }
 
 #[test]
-fn embed_multiple_structs_on_valid_tag() {
+fn multiple_structs_on_valid_tag() {
     #[derive(Spread)]
     #[tags(only(a))]
     struct Foo<'a> {
