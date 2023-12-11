@@ -1,1 +1,2 @@
-mod raw_attrs;
+mod r#enum;
+mod r#struct;

@@ -1,11 +1,11 @@
-use lfml_macros::MarkupAttrs;
+use lfml_macros::Spread;
 
 #[test]
 fn basic() {
-    // #[derive(MarkupAttrs)]
-    // #[prefix = "hx"]
-    // enum HxControl<'a> {
-    //     Get { get: &'a str },
-    //     Post { post: &'a str },
-    // }
+    #[derive(Spread)]
+    #[prefix = "hx"]
+    enum HxControl<'a> {
+        Get { get: &'a str },
+        Post { post: &'a str },
+    }
 }

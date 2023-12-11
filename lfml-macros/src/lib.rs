@@ -1,13 +1,13 @@
 extern crate proc_macro;
 
-mod derive;
 mod html;
+mod spread;
 
-#[proc_macro_derive(MarkupAttrs, attributes(prefix, suffix, rename, escape_value, tags))]
-pub fn reflect_attrs(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(Spread, attributes(prefix, suffix, rename, escape_value, tags))]
+pub fn spread(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
 
-    derive::expand_embed_as_attrs(&input)
+    spread::generate_spread_impl(&input)
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }

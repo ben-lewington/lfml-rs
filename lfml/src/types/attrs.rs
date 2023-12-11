@@ -1,15 +1,15 @@
-pub trait MarkupAttrs {
+pub trait Spread {
     fn raw(&self) -> String;
 }
 
-impl<'a, T: MarkupAttrs> MarkupAttrs for &'a T {
+impl<'a, T: Spread> Spread for &'a T {
     fn raw(&self) -> String {
-        MarkupAttrs::raw(*self)
+        Spread::raw(*self)
     }
 }
 
-impl<'a, T: MarkupAttrs> MarkupAttrs for &'a mut T {
+impl<'a, T: Spread> Spread for &'a mut T {
     fn raw(&self) -> String {
-        MarkupAttrs::raw(*self)
+        Spread::raw(*self)
     }
 }

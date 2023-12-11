@@ -1,10 +1,10 @@
 use crate::assert_html_eq;
 
-use lfml::MarkupAttrs;
+use lfml::Spread;
 
 #[test]
 fn basic() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[prefix = "hx"]
     struct HxGet<'a> {
         get: &'a str,
@@ -37,9 +37,9 @@ fn basic() {
 
 #[test]
 fn restrict_attribute() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[prefix = "hx"]
-    #[tags(a, b, c)]
+    #[tags(only(a, b, c))]
     struct HxGet<'a> {
         get: &'a str,
         target: &'a str,
@@ -75,13 +75,13 @@ fn restrict_attribute() {
 
 #[test]
 fn embed_multiple_structs_on_valid_tag() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[tags(a)]
     struct Foo<'a> {
         target: &'a str,
     }
 
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[tags(a)]
     struct Bar<'a> {
         get: &'a str,
@@ -98,7 +98,7 @@ fn embed_multiple_structs_on_valid_tag() {
 
 #[test]
 fn option_type_with_toggle_syntax() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[tags(a)]
     struct Foo<'a> {
         target: &'a str,

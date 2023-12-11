@@ -1,8 +1,8 @@
-use lfml::MarkupAttrs;
+use lfml::Spread;
 
 #[test]
 fn basic() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     struct A<'a> {
         foo: i32,
         bar: &'a str,
@@ -10,12 +10,12 @@ fn basic() {
 
     let y = A { foo: 0, bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"0\" bar=\"a\"");
+    assert_eq!(Spread::raw(&y), " foo=\"0\" bar=\"a\"");
 }
 
 #[test]
 fn escape_values() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     struct A {
         #[escape_value]
         bar: String,
@@ -25,12 +25,12 @@ fn escape_values() {
         bar: "<a></a>".into(),
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), " bar=\"&lt;a&gt;&lt;/a&gt;\"");
+    assert_eq!(Spread::raw(&y), " bar=\"&lt;a&gt;&lt;/a&gt;\"");
 }
 
 #[test]
 fn global_prefix() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[prefix]
     struct A<'a> {
         foo: &'a str,
@@ -39,9 +39,9 @@ fn global_prefix() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" data-bar=\"a\"");
+    assert_eq!(Spread::raw(&y), " data-foo=\"a\" data-bar=\"a\"");
 
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[prefix = "x-data"]
     struct B<'a> {
         foo: &'a str,
@@ -50,12 +50,12 @@ fn global_prefix() {
 
     let y = B { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " x-data-foo=\"a\" x-data-bar=\"a\"");
+    assert_eq!(Spread::raw(&y), " x-data-foo=\"a\" x-data-bar=\"a\"");
 }
 
 #[test]
 fn global_suffix() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[suffix = "attr"]
     struct A<'a> {
         foo: &'a str,
@@ -64,12 +64,12 @@ fn global_suffix() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"a\"");
+    assert_eq!(Spread::raw(&y), " foo-attr=\"a\" bar-attr=\"a\"");
 }
 
 #[test]
 fn rename_field() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     struct A<'a> {
         foo: &'a str,
         #[rename = "baz"]
@@ -78,12 +78,12 @@ fn rename_field() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" baz=\"a\"");
+    assert_eq!(Spread::raw(&y), " foo=\"a\" baz=\"a\"");
 }
 
 #[test]
 fn rename_overrides_prefix_and_suffix() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[prefix]
     struct A<'a> {
         foo: &'a str,
@@ -93,9 +93,9 @@ fn rename_overrides_prefix_and_suffix() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" baz=\"a\"");
+    assert_eq!(Spread::raw(&y), " data-foo=\"a\" baz=\"a\"");
 
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[suffix = "attr"]
     struct B<'a> {
         foo: &'a str,
@@ -105,12 +105,12 @@ fn rename_overrides_prefix_and_suffix() {
 
     let y = B { foo: "a", bar: "a" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" baz=\"a\"");
+    assert_eq!(Spread::raw(&y), " foo-attr=\"a\" baz=\"a\"");
 }
 
 #[test]
 fn global_prefix_and_suffix() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[suffix = "attr"]
     #[prefix]
     struct A<'a> {
@@ -120,12 +120,9 @@ fn global_prefix_and_suffix() {
 
     let y = A { foo: "a", bar: "a" };
 
-    assert_eq!(
-        MarkupAttrs::raw(&y),
-        " data-foo-attr=\"a\" data-bar-attr=\"a\""
-    );
+    assert_eq!(Spread::raw(&y), " data-foo-attr=\"a\" data-bar-attr=\"a\"");
 
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[suffix = "attr"]
     #[prefix = "x-data"]
     struct B<'a> {
@@ -136,14 +133,14 @@ fn global_prefix_and_suffix() {
     let y = B { foo: "a", bar: "a" };
 
     assert_eq!(
-        MarkupAttrs::raw(&y),
+        Spread::raw(&y),
         " x-data-foo-attr=\"a\" x-data-bar-attr=\"a\""
     );
 }
 
 #[test]
 fn blanda_uppa() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[suffix = "attr"]
     struct A<'a> {
         foo: &'a str,
@@ -153,9 +150,9 @@ fn blanda_uppa() {
 
     let y = A { foo: "a", bar: "<" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo-attr=\"a\" bar-attr=\"&lt;\"");
+    assert_eq!(Spread::raw(&y), " foo-attr=\"a\" bar-attr=\"&lt;\"");
 
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[prefix]
     struct B<'a> {
         foo: &'a str,
@@ -165,9 +162,9 @@ fn blanda_uppa() {
 
     let y = B { foo: "a", bar: "<" };
 
-    assert_eq!(MarkupAttrs::raw(&y), " data-foo=\"a\" data-bar=\"&lt;\"");
+    assert_eq!(Spread::raw(&y), " data-foo=\"a\" data-bar=\"&lt;\"");
 
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     #[prefix]
     #[suffix = "attr"]
     struct C<'a> {
@@ -179,14 +176,14 @@ fn blanda_uppa() {
     let y = C { foo: "a", bar: "<" };
 
     assert_eq!(
-        MarkupAttrs::raw(&y),
+        Spread::raw(&y),
         " data-foo-attr=\"a\" data-bar-attr=\"&lt;\""
     );
 }
 
 #[test]
 fn display_trait_bound_is_delegated_for_generic_types() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     struct A<T> {
         foo: T,
     }
@@ -194,7 +191,7 @@ fn display_trait_bound_is_delegated_for_generic_types() {
 
 #[test]
 fn option_fields_are_handled() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     struct A {
         foo: std::option::Option<String>,
         bar: Option<i32>,
@@ -205,38 +202,38 @@ fn option_fields_are_handled() {
         bar: None,
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\"");
+    assert_eq!(Spread::raw(&y), " foo=\"a\"");
 
     let y = A {
         foo: None,
         bar: None,
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), "");
+    assert_eq!(Spread::raw(&y), "");
 
     let y = A {
         foo: Some("a".into()),
         bar: Some(0),
     };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\" bar=\"0\"");
+    assert_eq!(Spread::raw(&y), " foo=\"a\" bar=\"0\"");
 }
 
 #[test]
 fn option_fields_work_with_generics() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     struct B<T> {
         foo: Option<T>,
     }
 
     let y = B { foo: Some("a") };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"a\"");
+    assert_eq!(Spread::raw(&y), " foo=\"a\"");
 }
 
 #[test]
 fn option_fields_can_be_escaped() {
-    #[derive(MarkupAttrs)]
+    #[derive(Spread)]
     struct A<'a> {
         #[escape_value]
         foo: Option<&'a str>,
@@ -244,5 +241,5 @@ fn option_fields_can_be_escaped() {
 
     let y = A { foo: Some("<") };
 
-    assert_eq!(MarkupAttrs::raw(&y), " foo=\"&lt;\"");
+    assert_eq!(Spread::raw(&y), " foo=\"&lt;\"");
 }
