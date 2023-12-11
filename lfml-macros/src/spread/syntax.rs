@@ -1,24 +1,23 @@
 use proc_macro2::Ident;
 use syn::Generics;
 
-
 #[derive(Debug, Clone)]
 pub struct SpreadInput {
     pub tags: ImplTags,
-    pub prefix: Option<String>,
-    pub suffix: Option<String>,
     pub r#struct: Ident,
-    pub fields: SpreadFields,
+    pub fields: SpreadData,
     pub generics: Generics,
 }
 
 #[derive(Debug, Clone)]
-pub enum SpreadFields {
+#[non_exhaustive]
+pub enum SpreadData {
     Struct(SpreadBlock),
-    Enum(Vec<SpreadBlock>),
+    Enum(Vec<(Ident, SpreadBlock)>),
 }
 
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum ImplTags {
     DefaultWith {
         include: Option<Vec<Ident>>,
@@ -29,15 +28,9 @@ pub enum ImplTags {
 
 #[derive(Debug, Clone)]
 pub struct SpreadBlock {
-    pub variant: Option<SpreadVariant>,
-    pub fields: Vec<SpreadField>,
-}
-
-#[derive(Debug, Clone)]
-pub struct SpreadVariant {
     pub prefix: Option<String>,
     pub suffix: Option<String>,
-    pub name: Ident,
+    pub fields: Vec<SpreadField>,
 }
 
 #[derive(Debug, Clone)]

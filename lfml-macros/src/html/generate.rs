@@ -120,10 +120,9 @@ pub fn markup_as_string_push_operations(
                 });
 
                 if let Some(inner) = inner {
-                    let close = Literal::string(&format!("</{}>", tag));
-
                     markup_as_string_push_operations(buffer_id, inner, output)?;
 
+                    let close = Literal::string(&format!("</{}>", tag));
                     output.append_all(quote! {
                         #buffer_id.push_str(#close);
                     })

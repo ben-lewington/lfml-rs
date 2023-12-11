@@ -5,7 +5,7 @@ use syn::{
 };
 
 use crate::spread::{
-    syntax::{ImplTags, SpreadBlock, SpreadField, SpreadFields, SpreadInput, SpreadVariant},
+    syntax::{ImplTags, SpreadBlock, SpreadField, SpreadData, SpreadInput},
     DATA_PREFIX,
 };
 
@@ -88,17 +88,17 @@ impl SpreadInput {
                     let mut only: Option<Vec<Ident>> = None;
 
                     loop {
-                        match it.next() {
-                            Some(TokenTree::Ident(i)) if i == "include" || i == "exclude" || i == "only" => {
-                                it.next();
+                        print!("outer ");
+                        match dbg!(it.next()) {
+                            Some(TokenTree::Ident(i)) => {
                                 match it.next() {
                                     Some(TokenTree::Group(g))
                                         if g.delimiter() == Delimiter::Parenthesis =>
                                     {
-                                        let mut inc = vec![];
+                                        let mut v = vec![];
                                         for t in g.stream().into_iter() {
                                             match t {
-                                                TokenTree::Ident(i) => inc.push(i),
+                                                TokenTree::Ident(i) => v.push(i),
                                                 TokenTree::Punct(p) if p.as_char() == ',' => {}
                                                 _ => {
                                                     return Err(syn::Error::new(
@@ -108,12 +108,20 @@ impl SpreadInput {
                                                 }
                                             }
                                         }
-                                        include.replace(inc);
+                                        if i == "include" {
+                                            include.replace(v);
+                                        } else if i == "exclude" {
+                                            exclude.replace(v);
+                                        } else if i == "only" {
+                                            only.replace(v);
+                                        }
                                     }
-                                    _ => {
+                                    Some(TokenTree::Punct(_)) => {}
+                                    None => break,
+                                    t => {
                                         return Err(syn::Error::new(
                                             i.span(),
-                                            "expected list of tag names",
+                                            format!("expected list of tag names, got {t:?}"),
                                         ))
                                     }
                                 }
@@ -123,7 +131,7 @@ impl SpreadInput {
                         }
                     }
 
-                    tags = match (include, exclude, only) {
+                    tags = match dbg!(include, exclude, only) {
                         (None, None, None) => tags,
                         (None, None, Some(only)) => ImplTags::Only(only),
                         (exclude, include, None) => ImplTags::DefaultWith { include, exclude },
@@ -144,7 +152,7 @@ impl SpreadInput {
                 struct_token: _,
                 fields:
                     Fields::Named(FieldsNamed {
-                        brace_token,
+                        brace_token: _,
                         named: fields,
                     }),
                 semi_token: _,
@@ -218,8 +226,9 @@ impl SpreadInput {
                     });
                 }
 
-                SpreadFields::Struct(SpreadBlock {
-                    variant: None,
+                SpreadData::Struct(SpreadBlock {
+                    prefix,
+                    suffix,
                     fields: fs,
                 })
             }
@@ -379,16 +388,13 @@ impl SpreadInput {
                             is_escaped,
                         });
                     }
-                    vars.push(SpreadBlock {
-                        variant: Some(SpreadVariant {
-                            prefix,
-                            suffix,
-                            name: var_ident.clone(),
-                        }),
+                    vars.push((var_ident.clone(), SpreadBlock {
+                        prefix,
+                        suffix,
                         fields: fs,
-                    })
+                    }));
                 }
-                SpreadFields::Enum(vars)
+                SpreadData::Enum(vars)
             }
             Data::Union(_) => todo!("unions can be implemented"),
             _ => todo!("unimplemented combination"),
@@ -396,8 +402,6 @@ impl SpreadInput {
 
         Ok(SpreadInput {
             tags,
-            prefix,
-            suffix,
             fields,
             generics,
             r#struct: struct_ident,

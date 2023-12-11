@@ -2,7 +2,7 @@ mod integrations;
 mod types;
 
 pub use crate::types::{
-    attrs::MarkupAttrs,
+    attrs::Spread,
     markup::{Escaped, Render},
 };
 
