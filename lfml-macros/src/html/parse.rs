@@ -1,8 +1,9 @@
 use crate::html::syntax::{
-    InterpValue, InterpValueType, Markup, MarkupId, MarkupLit, TagAttribute,
+    InterpMarkupExpr, InterpValue, InterpValueType, Markup, MarkupId, MarkupLit, TagAttribute,
 };
 
-use proc_macro2::{Delimiter, Ident, Literal, TokenStream, TokenTree};
+use proc_macro2::{Delimiter, Ident, Literal, Span, TokenStream, TokenTree};
+use quote::ToTokens;
 use syn::Lit;
 
 use super::{syntax::External, unnamed_tag_ident};
@@ -79,10 +80,30 @@ impl Iterator for LfmlParser {
                 Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Parenthesis => {
                     self.advance();
 
-                    return Some(Ok(Markup::Slot(External(g.stream()))));
+                    return Some(Ok(Markup::Slot(InterpMarkupExpr::Simple(External(
+                        g.stream(),
+                    )))));
                 }
                 Some(TokenTree::Punct(p)) => match p.as_char() {
                     '@' | '.' | '#' => {
+                        match self.peek_2() {
+                            (_, Some(TokenTree::Ident(i)))
+                                if p.as_char() == '@'
+                                    && (i == "match" || i == "if" || i == "for") =>
+                            {
+                                self.advance();
+                                if i == "match" {
+                                    let match_expr = match self.parse_match() {
+                                        Ok(m) => m,
+                                        Err(e) => return Some(Err(e)),
+                                    };
+                                    return Some(Ok(Markup::Slot(match_expr)));
+                                }
+                            }
+                            t => {
+                                todo!("{t:?}");
+                            }
+                        }
                         let tag = unnamed_tag_ident();
 
                         let (attrs, inner) = match self.parse_attrs(tag.clone()) {
@@ -146,7 +167,21 @@ impl LfmlParser {
         (x0, x1)
     }
 
+    fn peek_3(&self) -> (Option<TokenTree>, Option<TokenTree>, Option<TokenTree>) {
+        let mut ts = self.0.clone();
+        let x0 = ts.next();
+        let x1 = ts.next();
+        let x2 = ts.next();
+        (x0, x1, x2)
+    }
+
     fn advance_2(&mut self) {
+        self.0.next();
+        self.0.next();
+    }
+
+    fn advance_3(&mut self) {
+        self.0.next();
         self.0.next();
         self.0.next();
     }
@@ -168,6 +203,66 @@ impl LfmlParser {
             }
         }
         Ok(inner)
+    }
+
+    fn parse_match(&mut self) -> syn::Result<InterpMarkupExpr> {
+        let match_kw = match self.advance() {
+            Some(TokenTree::Ident(i)) if i == "match" => i,
+            t => {
+                return Err(syn::Error::new(
+                    t.map(|t| t.span()).unwrap_or(Span::mixed_site()),
+                    "expected `match` ident",
+                ))
+            }
+        };
+        let mut outer_ext = match_kw.to_token_stream();
+        let mut variants = vec![];
+        'outer: loop {
+            match self.peek() {
+                Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Brace => {
+                    self.advance();
+                    let mut s = Self(g.stream().into_iter());
+
+                    let mut inner_ext = TokenStream::new();
+                    'variants: loop {
+                        match s.peek_3() {
+                            (
+                                Some(TokenTree::Punct(eq)),
+                                Some(TokenTree::Punct(rb)),
+                                Some(TokenTree::Group(g)),
+                            ) if (eq.as_char() == '=')
+                                && rb.as_char() == '>'
+                                && g.delimiter() == Delimiter::Brace =>
+                            {
+                                s.advance_3();
+                                let ms: Vec<Markup> = match Self(g.stream().into_iter()).collect() {
+                                    Ok(ms) => ms,
+                                    Err(e) => return Err(e),
+                                };
+
+                                variants.push((External(inner_ext.clone()), ms));
+                                inner_ext = TokenStream::new();
+
+                                continue 'variants;
+                            }
+                            (Some(t), _, _) => {
+                                t.to_tokens(&mut inner_ext);
+                                s.advance();
+                            }
+                            (None, _, _) => break 'variants,
+                        };
+                    }
+
+                    break 'outer;
+                }
+                Some(t) => {
+                    t.to_tokens(&mut outer_ext);
+                    self.advance();
+                }
+                None => return Err(syn::Error::new(match_kw.span(), "unexpected end of macro")),
+            }
+        }
+        Ok(InterpMarkupExpr::Match(External(outer_ext), variants))
     }
 
     fn parse_ident(&mut self) -> syn::Result<MarkupId> {
@@ -420,7 +515,7 @@ impl LfmlParser {
                         value: Some(l),
                     })
                 }
-                _ => todo!("a"),
+                t => todo!("{t:?}"),
             }
         }
     }

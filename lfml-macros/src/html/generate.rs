@@ -3,7 +3,7 @@ use crate::html::syntax::{InterpValue, InterpValueType, Markup, TagAttribute};
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, TokenStreamExt};
 
-use super::syntax::MarkupId;
+use super::syntax::{InterpMarkupExpr, MarkupId};
 
 pub fn markup_as_string_push_operations(
     buffer_id: &Ident,
@@ -131,10 +131,29 @@ pub fn markup_as_string_push_operations(
             Markup::AnonBlock(b) => {
                 markup_as_string_push_operations(buffer_id, b, output)?;
             }
-            Markup::Slot(i) => {
+            Markup::Slot(InterpMarkupExpr::Simple(s)) => {
                 output.append_all(quote! {
-                    #buffer_id.push_str(&lfml::Render::markup(&{#i}).as_string());
+                    #buffer_id.push_str(&lfml::Render::markup(&{#s}).as_string());
                 });
+            }
+            Markup::Slot(InterpMarkupExpr::Match(outer, variants)) => {
+                let mut vars = vec![];
+                for (pattern, value) in variants {
+                    let mut value_expr = TokenStream::new();
+                    markup_as_string_push_operations(buffer_id, value, &mut value_expr)?;
+
+                    vars.push(quote! {
+                        #pattern => { #value_expr },
+                    });
+                }
+                output.append_all(quote! {
+                    #outer {
+                        #(#vars)*
+                    }
+                });
+            }
+            Markup::Slot(e) => {
+                todo!("{e:?}");
             }
         }
     }
