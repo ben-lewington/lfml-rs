@@ -7,6 +7,6 @@ pub use crate::types::{
 };
 
 pub use lfml_escape::{escape_string, escape_to_string};
-pub use lfml_macros::{html, MarkupAttrs};
+pub use lfml_macros::{html, Spread};
 
 pub type Markup = Escaped<String>;

@@ -8,45 +8,45 @@ pub enum Markup {
     LiteralSequence(Vec<MarkupLit>),
     Tag {
         tag: MarkupId,
-        attrs: Vec<MarkupAttr>,
+        attrs: Vec<TagAttribute>,
         inner: Option<Vec<Markup>>,
     },
     AnonBlock(Vec<Markup>),
-    Interpolated(External),
+    Slot(External),
 }
 
 #[non_exhaustive]
 #[derive(Debug, Clone)]
-pub enum MarkupAttr {
+pub enum TagAttribute {
     Lit {
         name: MarkupId,
         value: Option<MarkupLit>,
     },
-    Interpolate {
-        r#type: Interpolate,
+    Interpolated {
+        r#type: InterpValue,
         value: External,
     },
 }
 
 #[non_exhaustive]
 #[derive(Debug, Clone)]
-pub enum Interpolate {
+pub enum InterpValue {
     Toggle {
         name: MarkupId,
     },
     NameValue {
         name: MarkupId,
-        wrapper: InterpolateWrapper,
+        wrapper: InterpValueType,
     },
     Spread {
         tag: MarkupId,
-        wrapper: InterpolateWrapper,
+        wrapper: InterpValueType,
     },
 }
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy)]
-pub enum InterpolateWrapper {
+pub enum InterpValueType {
     None,
     Option,
 }

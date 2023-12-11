@@ -9,7 +9,7 @@ edition = "2021"
 lfml-escape = { path = "../lfml-escape" }
 proc-macro2 = "1.0.70"
 quote = "1.0.33"
-syn = { version = "2.0.39", features = ["extra-traits"] }
+syn = { version = "2.0.39", features = ["extra-traits", "parsing"] }
 
 [lib]
 proc-macro = true

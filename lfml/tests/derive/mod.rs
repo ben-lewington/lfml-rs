@@ -1,1 +1,2 @@
-mod r#struct;
+// mod r#struct;
+mod r#enum;

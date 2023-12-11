@@ -1,4 +1,4 @@
-use crate::html::syntax::{Interpolate, InterpolateWrapper, Markup, MarkupAttr};
+use crate::html::syntax::{InterpValue, InterpValueType, Markup, TagAttribute};
 
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, TokenStreamExt};
@@ -32,7 +32,7 @@ pub fn markup_as_string_push_operations(
 
                 for attr in attrs {
                     match attr {
-                        MarkupAttr::Lit { name, value } => {
+                        TagAttribute::Lit { name, value } => {
                             opening_tag.push(' ');
                             opening_tag.push_str(&name.to_string());
                             if let Some(v) = value {
@@ -41,8 +41,8 @@ pub fn markup_as_string_push_operations(
                                 opening_tag.push('\"');
                             }
                         }
-                        MarkupAttr::Interpolate { value, r#type } => match r#type {
-                            Interpolate::Toggle { name } => {
+                        TagAttribute::Interpolated { value, r#type } => match r#type {
+                            InterpValue::Toggle { name } => {
                                 let litstr = Literal::string(&format!(" {name}"));
                                 interp_attrs.push(quote! {
                                     if { #value } {
@@ -53,8 +53,8 @@ pub fn markup_as_string_push_operations(
                                 });
                                 opening_tag.push_str("{}");
                             }
-                            Interpolate::NameValue { name, wrapper } => match wrapper {
-                                InterpolateWrapper::None => {
+                            InterpValue::NameValue { name, wrapper } => match wrapper {
+                                InterpValueType::None => {
                                     interp_attrs.push(quote! {
                                         lfml::escape_string(&{
                                             #value
@@ -62,7 +62,7 @@ pub fn markup_as_string_push_operations(
                                     });
                                     opening_tag.push_str(&format!(" {}=\"{{}}\"", name));
                                 }
-                                InterpolateWrapper::Option => {
+                                InterpValueType::Option => {
                                     let litstr = Literal::string(&format!(" {}=\"{{}}\"", name));
 
                                     interp_attrs.push(quote! {
@@ -76,17 +76,17 @@ pub fn markup_as_string_push_operations(
                                     opening_tag.push_str("{}");
                                 }
                             },
-                            Interpolate::Spread { tag, wrapper } => {
+                            InterpValue::Spread { tag, wrapper } => {
                                 let MarkupId::Basic(tag) = tag else {
                                     todo!("spreading for tags containing hyphens");
                                 };
                                 match wrapper {
-                                    InterpolateWrapper::None => {
+                                    InterpValueType::None => {
                                         interp_attrs.push(quote! { {
                                             { &#value }.__lfml_tags().#tag()
                                         }});
                                     }
-                                    InterpolateWrapper::Option => {
+                                    InterpValueType::Option => {
                                         interp_attrs.push(quote! { {
                                             if let Some(i) = { &#value } {
                                                 i.__lfml_tags().#tag()
@@ -132,7 +132,7 @@ pub fn markup_as_string_push_operations(
             Markup::AnonBlock(b) => {
                 markup_as_string_push_operations(buffer_id, b, output)?;
             }
-            Markup::Interpolated(i) => {
+            Markup::Slot(i) => {
                 output.append_all(quote! {
                     #buffer_id.push_str(&lfml::Render::markup(&{#i}).as_string());
                 });
