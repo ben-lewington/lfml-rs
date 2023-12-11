@@ -1,5 +1,6 @@
-use crate::{html::VALID_HTML5_TAGS,
-spread::syntax::{SpreadBlock, SpreadField, SpreadData, SpreadInput}
+use crate::{
+    html::VALID_HTML5_TAGS,
+    spread::syntax::{SpreadBlock, SpreadData, SpreadField, SpreadInput},
 };
 
 use std::iter::Extend;
@@ -50,10 +51,12 @@ pub fn generate_spread_impl(
                         .as_ref()
                         .filter(|e| e.iter().any(|e| e == t))
                         .is_none()
-                        || include
-                            .as_ref()
-                            .filter(|e| e.iter().any(|e| e == t))
-                            .is_some()
+                })
+                .filter(|t| {
+                    include
+                        .as_ref()
+                        .filter(|e| e.iter().any(|e| e == t))
+                        .is_none()
                 })
                 .collect::<Vec<_>>();
 
@@ -84,17 +87,12 @@ pub fn generate_spread_impl(
     };
 
     let impl_raw_body = match fields {
-        SpreadData::Struct(block) => {
-            block.generate_tokens(None)
-        }
+        SpreadData::Struct(block) => block.generate_tokens(None),
         SpreadData::Enum(var_blocks) => {
             let mut vars = vec![];
 
             for (var_name, block) in var_blocks {
-
-                vars.push(block.generate_tokens(
-                    Some(var_name),
-                ));
+                vars.push(block.generate_tokens(Some(var_name)));
             }
             quote! {
                 match self {
@@ -129,10 +127,7 @@ pub fn generate_spread_impl(
 }
 
 impl SpreadBlock {
-    fn generate_tokens(
-        &self,
-        var_name: Option<Ident>,
-    ) -> TokenStream {
+    fn generate_tokens(&self, var_name: Option<Ident>) -> TokenStream {
         let mut fs = TokenStream::new();
         let mut fmt_value_exprs = vec![];
         let mut fmt_string = String::new();

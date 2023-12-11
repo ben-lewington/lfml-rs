@@ -76,13 +76,13 @@ fn restrict_attribute() {
 #[test]
 fn embed_multiple_structs_on_valid_tag() {
     #[derive(Spread)]
-    #[tags(a)]
+    #[tags(only(a))]
     struct Foo<'a> {
         target: &'a str,
     }
 
     #[derive(Spread)]
-    #[tags(a)]
+    #[tags(only(a))]
     struct Bar<'a> {
         get: &'a str,
     }
@@ -99,7 +99,7 @@ fn embed_multiple_structs_on_valid_tag() {
 #[test]
 fn option_type_with_toggle_syntax() {
     #[derive(Spread)]
-    #[tags(a)]
+    #[tags(include(a))]
     struct Foo<'a> {
         target: &'a str,
     }

@@ -5,7 +5,7 @@ use syn::{
 };
 
 use crate::spread::{
-    syntax::{ImplTags, SpreadBlock, SpreadField, SpreadData, SpreadInput},
+    syntax::{ImplTags, SpreadBlock, SpreadData, SpreadField, SpreadInput},
     DATA_PREFIX,
 };
 
@@ -88,9 +88,10 @@ impl SpreadInput {
                     let mut only: Option<Vec<Ident>> = None;
 
                     loop {
-                        print!("outer ");
-                        match dbg!(it.next()) {
-                            Some(TokenTree::Ident(i)) => {
+                        match it.next() {
+                            Some(TokenTree::Ident(i))
+                                if i == "include" || i == "exclude" || i == "only" =>
+                            {
                                 match it.next() {
                                     Some(TokenTree::Group(g))
                                         if g.delimiter() == Delimiter::Parenthesis =>
@@ -127,14 +128,19 @@ impl SpreadInput {
                                 }
                             }
                             None => break,
-                            _ => {}
+                            _ => {
+                                return Err(syn::Error::new(
+                                    p.span(),
+                                    "expected either include, exclude or only idents",
+                                ))
+                            }
                         }
                     }
 
-                    tags = match dbg!(include, exclude, only) {
+                    tags = match (include, exclude, only) {
                         (None, None, None) => tags,
                         (None, None, Some(only)) => ImplTags::Only(only),
-                        (exclude, include, None) => ImplTags::DefaultWith { include, exclude },
+                        (include, exclude, None) => ImplTags::DefaultWith { include, exclude },
                         _ => {
                             return Err(syn::Error::new(
                                 p.span(),
@@ -246,9 +252,6 @@ impl SpreadInput {
                     discriminant: _,
                 } in variants.iter()
                 {
-                    let mut prefix = None;
-                    let mut suffix = None;
-
                     for Attribute {
                         pound_token: _,
                         style,
@@ -388,11 +391,14 @@ impl SpreadInput {
                             is_escaped,
                         });
                     }
-                    vars.push((var_ident.clone(), SpreadBlock {
-                        prefix,
-                        suffix,
-                        fields: fs,
-                    }));
+                    vars.push((
+                        var_ident.clone(),
+                        SpreadBlock {
+                            prefix: prefix.clone(),
+                            suffix: suffix.clone(),
+                            fields: fs,
+                        },
+                    ));
                 }
                 SpreadData::Enum(vars)
             }

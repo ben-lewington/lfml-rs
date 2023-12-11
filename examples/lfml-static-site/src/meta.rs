@@ -1,7 +1,7 @@
 use lfml::{Render, html};
 
-#[derive(lfml::MarkupAttrs)]
-#[tags(link)]
+#[derive(lfml::Spread)]
+#[tags(only(link))]
 struct Link<'a> {
     href: &'a str,
     rel: LinkRel,
