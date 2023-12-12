@@ -93,17 +93,23 @@ impl Iterator for LfmlParser {
                             {
                                 self.advance();
                                 if i == "match" {
-                                    let match_expr = match self.parse_match() {
+                                    let expr = match self.parse_match() {
                                         Ok(m) => m,
                                         Err(e) => return Some(Err(e)),
                                     };
-                                    return Some(Ok(Markup::Slot(match_expr)));
+                                    return Some(Ok(Markup::Slot(expr)));
                                 } else if i == "for" {
-                                    let match_expr = match self.parse_for() {
+                                    let expr = match self.parse_for() {
                                         Ok(m) => m,
                                         Err(e) => return Some(Err(e)),
                                     };
-                                    return Some(Ok(Markup::Slot(match_expr)));
+                                    return Some(Ok(Markup::Slot(expr)));
+                                } else if i == "if" {
+                                    let expr = match self.parse_if() {
+                                        Ok(m) => m,
+                                        Err(e) => return Some(Err(e)),
+                                    };
+                                    return Some(Ok(Markup::Slot(expr)));
                                 }
                             }
                             t => {
@@ -269,6 +275,77 @@ impl LfmlParser {
             }
         }
         Ok(InterpMarkupExpr::Match(External(outer_ext), variants))
+    }
+
+    fn parse_if(&mut self) -> syn::Result<InterpMarkupExpr> {
+        let if_kw = match self.advance() {
+            Some(TokenTree::Ident(i)) if i == "if" => i,
+            t => {
+                return Err(syn::Error::new(
+                    t.map(|t| t.span()).unwrap_or(Span::mixed_site()),
+                    "expected `if` ident",
+                ))
+            }
+        };
+
+        let mut outer_ext = if_kw.to_token_stream();
+        let outer_markup: Vec<Markup>;
+        let mut else_blocks = vec![];
+        'outer: loop {
+            match self.peek() {
+                Some(TokenTree::Group(g)) if g.delimiter() == Delimiter::Brace => {
+                    self.advance();
+                    outer_markup = Self(g.stream().into_iter()).collect::<syn::Result<Vec<_>>>()?;
+
+                    'test_if: loop {
+                        match self.peek_2() {
+                            (Some(TokenTree::Punct(p)), Some(TokenTree::Ident(else_kw)))
+                                if p.as_char() == '@' && else_kw == "else" =>
+                            {
+                                let mut else_ext = else_kw.to_token_stream();
+                                self.advance_2();
+                                loop {
+                                    match self.peek() {
+                                        Some(TokenTree::Group(g))
+                                            if g.delimiter() == Delimiter::Brace =>
+                                        {
+                                            self.advance();
+                                            let else_markup = Self(g.stream().into_iter())
+                                                .collect::<syn::Result<Vec<_>>>()?;
+
+                                            else_blocks
+                                                .push((External(else_ext.clone()), else_markup));
+
+                                            continue 'test_if;
+                                        }
+                                        Some(t) => {
+                                            t.to_tokens(&mut else_ext);
+                                            self.advance();
+                                        }
+                                        None => {
+                                            return Err(syn::Error::new(
+                                                if_kw.span(),
+                                                "unexpected end of macro",
+                                            ))
+                                        }
+                                    }
+                                }
+                            }
+                            _ => break 'outer,
+                        }
+                    }
+                }
+                Some(t) => {
+                    t.to_tokens(&mut outer_ext);
+                    self.advance();
+                }
+                None => return Err(syn::Error::new(if_kw.span(), "unexpected end of macro")),
+            }
+        }
+        Ok(InterpMarkupExpr::If {
+            if_block: (External(outer_ext), outer_markup),
+            else_blocks,
+        })
     }
 
     fn parse_for(&mut self) -> syn::Result<InterpMarkupExpr> {

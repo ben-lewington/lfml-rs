@@ -75,3 +75,42 @@ fn slot_for_brace_group_before_in_kw() {
         }
     } => "<a>0</a><a>1</a><a>2</a><a>3</a><a>4</a>");
 }
+
+#[test]
+fn slot_if() {
+    let a = 1;
+
+    assert_html_eq!({
+        @if a == 1 {
+            a { (a) }
+        } @else if a == 2 {
+            a { "foo " (a) }
+        } @else {
+            a { "snake eyes!" }
+        }
+    } => "<a>1</a>");
+
+    let a = 2;
+
+    assert_html_eq!({
+        @if a == 1 {
+            a { (a) }
+        } @else if a == 2 {
+            a { "foo " (a) }
+        } @else {
+            a { "snake eyes!" }
+        }
+    } => "<a>foo 2</a>");
+
+    let a = 3;
+
+    assert_html_eq!({
+        @if a == 1 {
+            a { (a) }
+        } @else if a == 2 {
+            a { "foo " (a) }
+        } @else {
+            a { "snake eyes!" }
+        }
+    } => "<a>snake eyes!</a>");
+}

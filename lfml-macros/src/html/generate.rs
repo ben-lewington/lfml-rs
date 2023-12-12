@@ -161,8 +161,29 @@ pub fn markup_as_string_push_operations(
                     }
                 });
             }
-            Markup::Slot(e) => {
-                todo!("slot {e:?}");
+            Markup::Slot(InterpMarkupExpr::If { if_block: (if_expr, if_value), else_blocks }) => {
+                let mut if_value_expr = TokenStream::new();
+                markup_as_string_push_operations(buffer_id, if_value, &mut if_value_expr)?;
+                let mut elses = vec![];
+                for (else_block, else_value) in else_blocks {
+                    let mut else_value_expr = TokenStream::new();
+                    markup_as_string_push_operations(buffer_id, else_value, &mut else_value_expr)?;
+
+                    elses.push(quote! {
+                        #else_block {
+                            #else_value_expr
+                        }
+                    });
+
+                }
+
+                output.append_all(quote! {
+                    #if_expr {
+                        #if_value_expr
+                    }
+                    #(#elses)*
+                });
+
             }
         }
     }
