@@ -98,6 +98,12 @@ impl Iterator for LfmlParser {
                                         Err(e) => return Some(Err(e)),
                                     };
                                     return Some(Ok(Markup::Slot(match_expr)));
+                                } else if i == "for" {
+                                    let match_expr = match self.parse_for() {
+                                        Ok(m) => m,
+                                        Err(e) => return Some(Err(e)),
+                                    };
+                                    return Some(Ok(Markup::Slot(match_expr)));
                                 }
                             }
                             t => {
@@ -263,6 +269,48 @@ impl LfmlParser {
             }
         }
         Ok(InterpMarkupExpr::Match(External(outer_ext), variants))
+    }
+
+    fn parse_for(&mut self) -> syn::Result<InterpMarkupExpr> {
+        let for_kw = match self.advance() {
+            Some(TokenTree::Ident(i)) if i == "for" => i,
+            t => {
+                return Err(syn::Error::new(
+                    t.map(|t| t.span()).unwrap_or(Span::mixed_site()),
+                    "expected `for` ident",
+                ))
+            }
+        };
+        let mut outer_ext = for_kw.to_token_stream();
+        let mut in_kw = None;
+        let repeating_blocks;
+        loop {
+            match self.peek() {
+                Some(TokenTree::Group(g))
+                    if g.delimiter() == Delimiter::Brace && in_kw.is_some() =>
+                {
+                    self.advance();
+
+                    repeating_blocks = match Self(g.stream().into_iter()).collect() {
+                        Ok(ms) => ms,
+                        Err(e) => return Err(e),
+                    };
+
+                    break;
+                }
+                Some(TokenTree::Ident(i)) if i == "in" => {
+                    in_kw.replace(i.clone());
+                    i.to_tokens(&mut outer_ext);
+                    self.advance();
+                }
+                Some(t) => {
+                    t.to_tokens(&mut outer_ext);
+                    self.advance();
+                }
+                None => return Err(syn::Error::new(for_kw.span(), "unexpected end of macro")),
+            }
+        }
+        Ok(InterpMarkupExpr::For(External(outer_ext), repeating_blocks))
     }
 
     fn parse_ident(&mut self) -> syn::Result<MarkupId> {

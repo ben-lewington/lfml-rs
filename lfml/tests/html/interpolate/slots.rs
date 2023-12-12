@@ -51,3 +51,27 @@ fn slot_match() {
         }
     } => "<a>0</a>");
 }
+
+#[test]
+fn slot_for() {
+    assert_html_eq!({
+        @for i in 0..=2 {
+            a { (i) }
+        }
+    } => "<a>0</a><a>1</a><a>2</a>");
+}
+
+#[test]
+fn slot_for_brace_group_before_in_kw() {
+    struct A {
+        a: i32,
+    }
+
+    let x: Vec<_> = (0..).take(5).map(|a| A { a }).collect();
+
+    assert_html_eq!({
+        @for A { a: i } in x {
+            a { (i) }
+        }
+    } => "<a>0</a><a>1</a><a>2</a><a>3</a><a>4</a>");
+}

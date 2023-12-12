@@ -15,6 +15,7 @@ pub enum Markup {
         attrs: Vec<TagAttribute>,
         inner: Option<Vec<Markup>>,
     },
+    /// anonymous block
     /// { #inner }
     AnonBlock(Vec<Markup>),
     /// lfml::Markup-valued rust expression that is interpolated into the rendered template.
@@ -40,16 +41,15 @@ pub enum InterpMarkupExpr {
     /// })*
     /// ```
     #[allow(dead_code)]
-    If{
-        if_block:  (External, Vec<Markup>),
-        else_blocks: Option<Vec<(External, Vec<Markup>)>>,
+    If {
+        if_block: (External, Vec<Markup>),
+        else_blocks: Vec<(External, Vec<Markup>)>,
     },
     /// ```
     /// @#for_expr {
     ///     #markup_expr
     /// }
     /// ```
-    #[allow(dead_code)]
     For(External, Vec<Markup>),
 }
 

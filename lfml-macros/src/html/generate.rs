@@ -152,8 +152,17 @@ pub fn markup_as_string_push_operations(
                     }
                 });
             }
+            Markup::Slot(InterpMarkupExpr::For(outer, repeat_block)) => {
+                let mut value_expr = TokenStream::new();
+                markup_as_string_push_operations(buffer_id, repeat_block, &mut value_expr)?;
+                output.append_all(quote! {
+                    #outer {
+                        #value_expr
+                    }
+                });
+            }
             Markup::Slot(e) => {
-                todo!("{e:?}");
+                todo!("slot {e:?}");
             }
         }
     }
