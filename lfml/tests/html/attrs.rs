@@ -47,3 +47,14 @@ fn self_closing_tags() {
         a foo="bar"; b {}
     } => "<a foo=\"bar\"><b></b>");
 }
+
+#[test]
+fn attr_names_with_hyphens() {
+    assert_html_eq!({
+        a foo-bar;
+    } => "<a foo-bar>");
+
+    assert_html_eq!({
+        a-b foo-bar="baz";
+    } => "<a-b foo-bar=\"baz\">");
+}
