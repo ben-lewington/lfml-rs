@@ -84,9 +84,13 @@ fn prefix_precedent() {
     #[derive(Spread)]
     #[prefix]
     enum Bar<'a> {
-        Baz { get: &'a str },
+        Baz {
+            get: &'a str,
+        },
         #[prefix = "x-data"]
-        Bat { get: &'a str },
+        Bat {
+            get: &'a str,
+        },
     }
 
     let x = Bar::Baz { get: "/" };

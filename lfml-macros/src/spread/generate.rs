@@ -1,7 +1,6 @@
-use crate::{
-    html::VALID_HTML5_TAGS,
-    spread::syntax::{SpreadBlock, SpreadData, SpreadField, SpreadInput},
-};
+use super::syntax::{SpreadBlock, SpreadData, SpreadField, SpreadInput};
+
+use lfml_html5::VALID_HTML5_TAGS;
 
 use std::iter::Extend;
 

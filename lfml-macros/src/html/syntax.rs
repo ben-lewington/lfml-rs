@@ -5,14 +5,52 @@ use syn::Lit;
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum Markup {
+    /// list of parsed literals (possibly `;` punctuated)
+    /// ```"abc" 123 true -100```
     LiteralSequence(Vec<MarkupLit>),
+    /// parsed markup_block
+    /// ```#tag #(#attrs)* { #inner }```
     Tag {
         tag: MarkupId,
         attrs: Vec<TagAttribute>,
         inner: Option<Vec<Markup>>,
     },
+    /// anonymous block
+    /// { #inner }
     AnonBlock(Vec<Markup>),
-    Slot(External),
+    /// lfml::Markup-valued rust expression that is interpolated into the rendered template.
+    Slot(InterpMarkupExpr),
+}
+
+#[non_exhaustive]
+#[derive(Debug, Clone)]
+pub enum InterpMarkupExpr {
+    /// (#expr)
+    Simple(External),
+    /// ```
+    /// @#match_expr {
+    ///     #(#variant => { #markup_expr },)*
+    /// }
+    /// ```
+    Match(External, Vec<(External, Vec<Markup>)>),
+    /// ```
+    /// @#if_expr {
+    ///     #markup_expr
+    /// } #(#else_expr {
+    ///     #markup_expr
+    /// })*
+    /// ```
+    #[allow(dead_code)]
+    If {
+        if_block: (External, Vec<Markup>),
+        else_blocks: Vec<(External, Vec<Markup>)>,
+    },
+    /// ```
+    /// @#for_expr {
+    ///     #markup_expr
+    /// }
+    /// ```
+    For(External, Vec<Markup>),
 }
 
 #[non_exhaustive]

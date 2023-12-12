@@ -125,10 +125,15 @@ name = "lfml-escape"
 version = "0.1.0"
 
 [[package]]
+name = "lfml-html5"
+version = "0.1.0"
+
+[[package]]
 name = "lfml-macros"
 version = "0.1.0"
 dependencies = [
  "lfml-escape",
+ "lfml-html5",
  "proc-macro2",
  "quote",
  "syn",

@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "lfml",
-    "lfml-macros",
     "lfml-escape",
+    "lfml-html5",
+    "lfml-macros",
 ]
 exclude = [
     "examples"
