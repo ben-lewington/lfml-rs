@@ -120,7 +120,8 @@ pub fn generate_spread_impl(
                 #tag_wrapper (self)
             }
         }
-    }.to_tokens(output);
+    }
+    .to_tokens(output);
 
     Ok(())
 }

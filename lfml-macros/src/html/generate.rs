@@ -161,7 +161,10 @@ pub fn markup_as_string_push_operations(
                     }
                 });
             }
-            Markup::Slot(InterpMarkupExpr::If { if_block: (if_expr, if_value), else_blocks }) => {
+            Markup::Slot(InterpMarkupExpr::If {
+                if_block: (if_expr, if_value),
+                else_blocks,
+            }) => {
                 let mut if_value_expr = TokenStream::new();
                 markup_as_string_push_operations(buffer_id, if_value, &mut if_value_expr)?;
                 let mut elses = vec![];
@@ -174,7 +177,6 @@ pub fn markup_as_string_push_operations(
                             #else_value_expr
                         }
                     });
-
                 }
 
                 output.append_all(quote! {
@@ -183,7 +185,6 @@ pub fn markup_as_string_push_operations(
                     }
                     #(#elses)*
                 });
-
             }
         }
     }
