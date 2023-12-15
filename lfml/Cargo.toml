@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 lfml-macros = { path = "../lfml-macros" }
 lfml-escape = { path = "../lfml-escape" }
+lfml-html5 = { path = "../lfml-html5" }
 itoa = "1.0.9"
 axum-core = { version = "0.4.1", optional = true }
 http = { version = "1.0.0", optional = true}

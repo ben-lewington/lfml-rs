@@ -1,3 +1,5 @@
+pub const DOCTYPE: &str = "<!doctype html>";
+
 pub const VALID_HTML5_TAGS: &[&str] = &[
     "a",
     "abbr",

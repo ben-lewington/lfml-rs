@@ -27,25 +27,24 @@ pub enum Markup {
 pub enum InterpMarkupExpr {
     /// (#expr)
     Simple(External),
-    /// ```
+    /// ```ignore
     /// @#match_expr {
     ///     #(#variant => { #markup_expr },)*
     /// }
     /// ```
     Match(External, Vec<(External, Vec<Markup>)>),
-    /// ```
+    /// ```ignore
     /// @#if_expr {
     ///     #markup_expr
     /// } #(#else_expr {
     ///     #markup_expr
     /// })*
-    /// ```
-    #[allow(dead_code)]
+    /// ```ignore
     If {
         if_block: (External, Vec<Markup>),
         else_blocks: Vec<(External, Vec<Markup>)>,
     },
-    /// ```
+    /// ```ignore
     /// @#for_expr {
     ///     #markup_expr
     /// }

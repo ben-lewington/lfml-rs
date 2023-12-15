@@ -408,9 +408,9 @@ impl SpreadInput {
 
         Ok(SpreadInput {
             tags,
+            data_id: struct_ident,
             fields,
             generics,
-            r#struct: struct_ident,
         })
     }
 }

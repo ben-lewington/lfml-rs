@@ -117,6 +117,7 @@ dependencies = [
  "http",
  "itoa",
  "lfml-escape",
+ "lfml-html5",
  "lfml-macros",
 ]
 

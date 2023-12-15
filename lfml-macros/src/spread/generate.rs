@@ -5,15 +5,15 @@ use lfml_html5::VALID_HTML5_TAGS;
 use std::iter::Extend;
 
 use proc_macro2::{Ident, Span, TokenStream};
-use quote::{format_ident, quote, TokenStreamExt};
+use quote::{format_ident, quote, ToTokens};
 use syn::{GenericParam, LitStr, TypeParam};
 
 pub fn generate_spread_impl(
     SpreadInput {
         tags,
+        data_id,
         fields,
         generics,
-        r#struct,
     }: SpreadInput,
     output: &mut proc_macro2::TokenStream,
 ) -> syn::Result<()> {
@@ -39,7 +39,7 @@ pub fn generate_spread_impl(
         })
         .collect();
 
-    let tag_wrapper = format_ident!("{struct}Tags");
+    let tag_wrapper = format_ident!("{data_id}Tags");
     let tags: Vec<TokenStream> = match tags {
         super::syntax::ImplTags::DefaultWith { include, exclude } => {
             let mut ts = VALID_HTML5_TAGS
@@ -101,9 +101,9 @@ pub fn generate_spread_impl(
         }
     };
 
-    output.append_all(quote! {
+    quote! {
         #[automatically_derived]
-        impl #impl_generics lfml::Spread for #r#struct #impl_ty #impl_where #(#disp_where),* {
+        impl #impl_generics lfml::Spread for #data_id #impl_ty #impl_where #(#disp_where),* {
             fn raw(&self) -> String {
                 #impl_raw_body
             }
@@ -111,16 +111,16 @@ pub fn generate_spread_impl(
 
         pub struct #tag_wrapper<T>(pub T);
 
-        impl #impl_generics #tag_wrapper< &#r#struct #impl_ty > #impl_where #(#disp_where),* {
+        impl #impl_generics #tag_wrapper< &#data_id #impl_ty > #impl_where #(#disp_where),* {
             #(#tags)*
         }
 
-        impl #impl_generics #r#struct #impl_ty #impl_where #(#disp_where),* {
-            fn __lfml_tags(&self) -> #tag_wrapper< &#r#struct #impl_ty > {
+        impl #impl_generics #data_id #impl_ty #impl_where #(#disp_where),* {
+            fn __lfml_tags(&self) -> #tag_wrapper< &#data_id #impl_ty > {
                 #tag_wrapper (self)
             }
         }
-    });
+    }.to_tokens(output);
 
     Ok(())
 }
@@ -189,7 +189,7 @@ impl SpreadBlock {
 
             fmt_value_exprs.push(fmt_expr);
             fmt_string.push_str(if is_option { "{}" } else { &fmt_attr });
-            fs.append_all(quote! { #name, });
+            quote! { #name, }.to_tokens(&mut fs);
         }
         let fmt_lit = LitStr::new(&fmt_string, Span::mixed_site());
 
