@@ -101,7 +101,7 @@ pub struct SpreadBlock {
     ///     }
     /// }
     /// ```
-    /// the acceptable forms is #[suffix = "foo"]
+    /// the acceptable form is #[suffix = "foo"]
     pub suffix: Option<String>,
     /// Field names and flaggs.
     pub fields: Vec<SpreadField>,

@@ -2,8 +2,8 @@ use proc_macro2::Span;
 use quote::ToTokens;
 use syn::Lit;
 
-#[non_exhaustive]
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum Markup {
     /// list of parsed literals (possibly `;` punctuated)
     /// ```"abc" 123 true -100```
@@ -22,8 +22,8 @@ pub enum Markup {
     Slot(InterpMarkupExpr),
 }
 
-#[non_exhaustive]
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum InterpMarkupExpr {
     /// (#expr)
     Simple(External),
@@ -52,42 +52,70 @@ pub enum InterpMarkupExpr {
     For(External, Vec<Markup>),
 }
 
-#[non_exhaustive]
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum TagAttribute {
+    /// An attribute literal name-value, e.g. #name="value", or without a value, e.g. #name
     Lit {
         name: MarkupId,
         value: Option<MarkupLit>,
     },
+    /// Attribute values which are to be interpolated
     Interpolated {
         r#type: InterpValue,
         value: External,
     },
 }
 
-#[non_exhaustive]
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum InterpValue {
-    Toggle {
-        name: MarkupId,
-    },
+    /// ```ignore
+    /// #name[#bool_expr]
+    /// ```
+    Toggle { name: MarkupId },
+    /// ```ignore
+    /// #name=(#expr)
+    /// // or
+    /// #name=[#expr]
+    /// ```
     NameValue {
         name: MarkupId,
         wrapper: InterpValueType,
     },
+    /// ```ignore
+    /// #tag @(#spread_expr)
+    /// // or
+    /// #tag @[#option_spread_expr]
+    /// ```
     Spread {
         tag: MarkupId,
         wrapper: InterpValueType,
     },
 }
 
-#[non_exhaustive]
+/// When interpolating an expression into a markup expression, we require the resultant expression
+/// implements Render (Display in attribute position).
+///
+/// This represents the wrapper type that the expression is expected to evaluate to. This way the
+/// generated code can handle or "unwrap" the inner type, and render it into the markup.
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum InterpValueType {
+    /// Inner type is expected to be impl Render
     None,
+    /// Inner type is expected to be Option<impl Render/Display>
     Option,
 }
 
+/// Identifiers in html can be either a rust identifier, or a hyphen separated list of identifiers
+/// (that starts and ends with an identifier).
+/// e.g.
+/// ```
+/// #ident
+/// //or
+/// #(#ident -)*#ident
+/// ```
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum MarkupId {
@@ -95,6 +123,8 @@ pub enum MarkupId {
     Complex(proc_macro2::Ident, String),
 }
 
+/// A literal value to be rendered into the final markup.
+/// it will either be a rust literal, or a -ve number
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum MarkupLit {
@@ -102,6 +132,7 @@ pub enum MarkupLit {
     NegativeNumber(proc_macro2::Literal),
 }
 
+/// A Tokenstream which is supposed to be parsed as rust code, rather than markup.
 #[derive(Debug, Clone)]
 pub struct External(pub proc_macro2::TokenStream);
 
@@ -163,7 +194,7 @@ impl MarkupLit {
                     Lit::Verbatim(v) => {
                         return Err(syn::Error::new(
                             self.span(),
-                            format!("unknown token literal {}, unable to convert to markup", v),
+                            format!("unknown token literal {v}, unable to convert to markup"),
                         ));
                     }
                     _ => {
