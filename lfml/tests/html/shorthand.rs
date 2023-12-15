@@ -71,3 +71,39 @@ fn id_toggle() {
         }
     } => "<a>bar</a>");
 }
+
+#[test]
+fn class_literal() {
+    assert_html_eq!({
+        ."headers" {}
+    } => "<div class=\"headers\"></div>");
+}
+
+#[test]
+fn class_ident() {
+    assert_html_eq!({
+        .headers {}
+    } => "<div class=\"headers\"></div>");
+
+    assert_html_eq!({
+        .head-ers {}
+    } => "<div class=\"head-ers\"></div>");
+}
+
+#[test]
+fn id_literal() {
+    assert_html_eq!({
+        #"headers" {}
+    } => "<div id=\"headers\"></div>");
+}
+
+#[test]
+fn id_ident() {
+    assert_html_eq!({
+        #headers {}
+    } => "<div id=\"headers\"></div>");
+
+    assert_html_eq!({
+        #head-ers {}
+    } => "<div id=\"head-ers\"></div>");
+}

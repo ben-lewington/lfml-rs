@@ -112,8 +112,8 @@ impl Iterator for LfmlParser {
                                     return Some(Ok(Markup::Slot(expr)));
                                 }
                             }
-                            t => {
-                                todo!("{t:?}");
+                            _ => {
+                                // todo!("{t:?}");
                             }
                         }
                         let tag = unnamed_tag_ident();
