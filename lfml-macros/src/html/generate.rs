@@ -143,7 +143,7 @@ pub fn markup_as_string_push_operations(
                     markup_as_string_push_operations(buffer_id, value, &mut value_expr)?;
 
                     vars.push(quote! {
-                        #pattern => { #value_expr },
+                        #pattern => { #value_expr }
                     });
                 }
                 output.append_all(quote! {

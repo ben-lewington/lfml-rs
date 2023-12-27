@@ -25,10 +25,7 @@ pub fn generate_markup_expr(
     let out_id = output_ident();
     let size_hint = input.to_string().len() * SIZE_MULTIPLIER;
 
-    let mut ast = vec![];
-    for s in LfmlParser(input.into_iter()) {
-        ast.push(s?);
-    }
+    let ast = LfmlParser(input.into_iter()).collect::<syn::Result<Vec<_>>>()?;
 
     let mut output = TokenStream::new();
 

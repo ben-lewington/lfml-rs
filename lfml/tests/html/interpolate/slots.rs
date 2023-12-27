@@ -53,6 +53,34 @@ fn slot_match() {
 }
 
 #[test]
+fn slot_trailing_comma() {
+    let x = Some(3);
+
+    assert_html_eq!({
+        @match x {
+            Some(i) => {
+                a { (i) }
+            },
+            None => {
+                a { 0 }
+            },
+        }
+    } => "<a>3</a>");
+
+    let x: Option<usize> = None;
+    assert_html_eq!({
+        @match x {
+            Some(i) => {
+                a { (i) }
+            }
+            None => {
+                a { 0 }
+            }
+        }
+    } => "<a>0</a>");
+}
+
+#[test]
 fn slot_for() {
     assert_html_eq!({
         @for i in 0..=2 {

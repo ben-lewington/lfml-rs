@@ -36,10 +36,10 @@ pub enum InterpMarkupExpr {
     /// ```ignore
     /// @#if_expr {
     ///     #markup_expr
-    /// } #(#else_expr {
+    /// } #(@#else_expr {
     ///     #markup_expr
     /// })*
-    /// ```ignore
+    /// ```
     If {
         if_block: (External, Vec<Markup>),
         else_blocks: Vec<(External, Vec<Markup>)>,
@@ -111,7 +111,7 @@ pub enum InterpValueType {
 /// Identifiers in html can be either a rust identifier, or a hyphen separated list of identifiers
 /// (that starts and ends with an identifier).
 /// e.g.
-/// ```
+/// ```ignore
 /// #ident
 /// //or
 /// #(#ident -)*#ident

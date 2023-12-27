@@ -124,15 +124,13 @@ impl Iterator for LfmlParser {
                         };
 
                         let inner = if let Some(inner) = inner {
-                            let mut v = vec![];
-                            for t in LfmlParser(inner.into_iter()) {
-                                let t = match t {
+                            Some(
+                                match LfmlParser(inner.into_iter()).collect::<syn::Result<Vec<_>>>()
+                                {
                                     Ok(t) => t,
                                     Err(e) => return Some(Err(e)),
-                                };
-                                v.push(t);
-                            }
-                            Some(v)
+                                },
+                            )
                         } else {
                             None
                         };
@@ -471,6 +469,7 @@ impl LfmlParser {
                 }
                 (Some(TokenTree::Ident(_)), _) => {
                     let ident = self.parse_ident()?;
+
                     'attr: loop {
                         match self.peek_2() {
                             (Some(TokenTree::Punct(p)), Some(TokenTree::Group(g)))
@@ -555,8 +554,18 @@ impl LfmlParser {
                                 });
                                 break 'attr;
                             }
-
-                            _ => todo!(""),
+                            (Some(TokenTree::Punct(p)), _)
+                                if p.as_char() == '#'
+                                    || p.as_char() == '.'
+                                    || p.as_char() == '@' =>
+                            {
+                                output.push(TagAttribute::Lit {
+                                    name: ident.clone(),
+                                    value: None,
+                                });
+                                break 'attr;
+                            }
+                            t => todo!("unexpected token whilst parsing attr {t:?}"),
                         }
                     }
                 }

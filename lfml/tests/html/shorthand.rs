@@ -107,3 +107,10 @@ fn id_ident() {
         #head-ers {}
     } => "<div id=\"head-ers\"></div>");
 }
+
+#[test]
+fn class_shorthand_after_valueless_tag() {
+    assert_html_eq!({
+        a foo-bar #headers {}
+    } => "<a foo-bar id=\"headers\"></a>");
+}
