@@ -1,4 +1,4 @@
-use lfml::Spread;
+use lfml::{Spread, NameOnly};
 
 #[test]
 fn basic() {
@@ -242,4 +242,43 @@ fn option_fields_can_be_escaped() {
     let y = A { foo: Some("<") };
 
     assert_eq!(Spread::raw(&y), " foo=\"&lt;\"");
+}
+
+#[test]
+fn spread_with_unit_nameonly_field_produces_valueless_tag() {
+    #[derive(Spread)]
+    #[tags(only(a))]
+    struct A {
+        #[escape_value]
+        _foo: lfml::NameOnly,
+    }
+
+    let y = A { _foo: NameOnly };
+
+    assert_eq!(Spread::raw(&y), " _foo");
+}
+
+#[test]
+fn spread_with_option_unit_nameonly_field_produces_valueless_tag() {
+    #[derive(Spread)]
+    #[tags(only(a))]
+    struct A {
+        #[escape_value]
+        foo: Option<lfml::NameOnly>,
+    }
+
+    let y = A { foo: Some(NameOnly) };
+
+    assert_eq!(Spread::raw(&y), " foo");
+
+    #[derive(Spread)]
+    #[tags(only(a))]
+    struct B {
+        #[escape_value]
+        foo: Option<lfml::NameOnly>,
+    }
+
+    let y = B { foo: None };
+
+    assert_eq!(Spread::raw(&y), "");
 }

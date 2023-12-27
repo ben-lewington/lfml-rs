@@ -111,6 +111,8 @@ pub struct SpreadBlock {
 pub struct SpreadField {
     pub rename: Option<String>,
     pub name: Ident,
+    // pub is_none: bool,
     pub is_option: bool,
     pub is_escaped: bool,
+    pub is_name_only: bool,
 }

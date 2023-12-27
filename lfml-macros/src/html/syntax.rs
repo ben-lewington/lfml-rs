@@ -132,7 +132,7 @@ pub enum MarkupLit {
     NegativeNumber(proc_macro2::Literal),
 }
 
-/// A Tokenstream which is supposed to be parsed as rust code, rather than markup.
+/// A TokenStream which is supposed to be parsed as rust code, rather than markup.
 #[derive(Debug, Clone)]
 pub struct External(pub proc_macro2::TokenStream);
 

@@ -1,13 +1,123 @@
 use proc_macro2::{Delimiter, Ident, TokenTree};
 use syn::{
-    spanned::Spanned, AttrStyle, Attribute, Data, DataEnum, DataStruct, DeriveInput, Expr, ExprLit,
-    Field, Fields, FieldsNamed, Lit, Meta, MetaList, MetaNameValue, Type, TypePath, Variant,
+    spanned::Spanned, AngleBracketedGenericArguments, AttrStyle, Attribute, Data, DataEnum,
+    DataStruct, DeriveInput, Expr, ExprLit, Field, Fields, FieldsNamed, GenericArgument, Lit, Meta,
+    MetaList, MetaNameValue, PathArguments, Type, TypePath, Variant,
 };
 
 use crate::spread::{
     syntax::{ImplTags, SpreadBlock, SpreadData, SpreadField, SpreadInput},
     DATA_PREFIX,
 };
+
+impl SpreadField {
+    fn parse(
+        Field {
+            attrs,
+            vis: _,
+            mutability: _,
+            ident,
+            colon_token: _,
+            ty,
+        }: Field,
+    ) -> syn::Result<Self> {
+        let (is_option, is_name_only) = match ty {
+            Type::Path(TypePath { qself: _, path })
+                if path
+                    .segments
+                    .iter()
+                    .last()
+                    .filter(|ps| ps.ident == "NameOnly")
+                    .is_some() =>
+            {
+                (false, true)
+            }
+            Type::Path(TypePath { qself: _, path })
+                if path
+                    .segments
+                    .iter()
+                    .last()
+                    .filter(|ps| ps.ident == "Option")
+                    .is_some() =>
+            {
+                let is_option = true;
+                let is_name_only = {
+                    let ps = path.segments.iter().last().expect("is_some");
+                    if let PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                        colon2_token: _,
+                        lt_token: _,
+                        ref args,
+                        gt_token: _,
+                    }) = ps.arguments
+                    {
+                        if let Some(GenericArgument::Type(Type::Path(TypePath {
+                            qself: _,
+                            path,
+                        }))) = args.iter().last()
+                        {
+                            path.segments
+                                .iter()
+                                .last()
+                                .filter(|p| p.ident == "NameOnly")
+                                .is_some()
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                };
+                (is_option, is_name_only)
+            }
+            _ => (false, false),
+        };
+
+        let mut is_escaped = false;
+        let mut rename = None;
+        for Attribute {
+            pound_token: _,
+            style,
+            bracket_token: _,
+            meta,
+        } in attrs
+        {
+            let span = meta.span();
+            match (style, meta.clone()) {
+                (AttrStyle::Outer, Meta::Path(p))
+                    if p.get_ident().filter(|p| *p == "escape_value").is_some() =>
+                {
+                    is_escaped = true;
+                }
+                (
+                    AttrStyle::Outer,
+                    Meta::NameValue(MetaNameValue {
+                        path: p,
+                        eq_token: _,
+                        value,
+                    }),
+                ) if p.get_ident().filter(|p| *p == "rename").is_some() => {
+                    let Expr::Lit(ExprLit {
+                        attrs: _,
+                        lit: Lit::Str(s),
+                    }) = value
+                    else {
+                        return Err(syn::Error::new(p.span(), "Expected string literal value"));
+                    };
+                    rename.replace(s.value());
+                }
+                (_, _) => return Err(syn::Error::new(span, "unexpected attribute")),
+            }
+        }
+
+        Ok(SpreadField {
+            rename,
+            name: ident.expect("named field"),
+            is_option,
+            is_escaped,
+            is_name_only,
+        })
+    }
+}
 
 impl SpreadInput {
     pub fn parse(
@@ -162,82 +272,14 @@ impl SpreadInput {
                         named: fields,
                     }),
                 semi_token: _,
-            }) => {
-                let mut fs = vec![];
-
-                for Field {
-                    attrs,
-                    vis: _,
-                    mutability: _,
-                    ident,
-                    colon_token: _,
-                    ty,
-                } in fields
-                {
-                    let is_option = if let Type::Path(TypePath { qself: _, path }) = ty {
-                        path.segments
-                            .iter()
-                            .last()
-                            .filter(|ps| ps.ident == "Option")
-                            .is_some()
-                    } else {
-                        false
-                    };
-
-                    let mut is_escaped = false;
-                    let mut rename = None;
-                    for Attribute {
-                        pound_token: _,
-                        style,
-                        bracket_token: _,
-                        meta,
-                    } in attrs
-                    {
-                        let span = meta.span();
-                        match (style, meta.clone()) {
-                            (AttrStyle::Outer, Meta::Path(p))
-                                if p.get_ident().filter(|p| *p == "escape_value").is_some() =>
-                            {
-                                is_escaped = true;
-                            }
-                            (
-                                AttrStyle::Outer,
-                                Meta::NameValue(MetaNameValue {
-                                    path: p,
-                                    eq_token: _,
-                                    value,
-                                }),
-                            ) if p.get_ident().filter(|p| *p == "rename").is_some() => {
-                                let Expr::Lit(ExprLit {
-                                    attrs: _,
-                                    lit: Lit::Str(s),
-                                }) = value
-                                else {
-                                    return Err(syn::Error::new(
-                                        p.span(),
-                                        "Expected string literal value",
-                                    ));
-                                };
-                                rename.replace(s.value());
-                            }
-                            (_, _) => return Err(syn::Error::new(span, "unexpected attribute")),
-                        }
-                    }
-
-                    fs.push(SpreadField {
-                        rename,
-                        name: ident.expect("named field"),
-                        is_option,
-                        is_escaped,
-                    });
-                }
-
-                SpreadData::Struct(SpreadBlock {
-                    prefix,
-                    suffix,
-                    fields: fs,
-                })
-            }
+            }) => SpreadData::Struct(SpreadBlock {
+                prefix,
+                suffix,
+                fields: fields
+                    .into_iter()
+                    .map(SpreadField::parse)
+                    .collect::<syn::Result<Vec<_>>>()?,
+            }),
             Data::Enum(DataEnum {
                 enum_token: _,
                 brace_token: _,
@@ -250,7 +292,7 @@ impl SpreadInput {
                     ident: var_ident,
                     fields,
                     discriminant: _,
-                } in variants.iter()
+                } in variants.into_iter()
                 {
                     for Attribute {
                         pound_token: _,
@@ -319,84 +361,15 @@ impl SpreadInput {
                         ));
                     };
 
-                    let mut fs = vec![];
-
-                    for Field {
-                        attrs,
-                        vis: _,
-                        mutability: _,
-                        ident,
-                        colon_token: _,
-                        ty,
-                    } in fields
-                    {
-                        let is_option = if let Type::Path(TypePath { qself: _, path }) = ty {
-                            path.segments
-                                .iter()
-                                .last()
-                                .filter(|ps| ps.ident == "Option")
-                                .is_some()
-                        } else {
-                            false
-                        };
-
-                        let mut is_escaped = false;
-                        let mut rename = None;
-                        for Attribute {
-                            pound_token: _,
-                            style,
-                            bracket_token: _,
-                            meta,
-                        } in attrs
-                        {
-                            match (style, meta) {
-                                (AttrStyle::Outer, Meta::Path(p))
-                                    if p.get_ident().filter(|p| *p == "escape_value").is_some() =>
-                                {
-                                    is_escaped = true;
-                                }
-                                (
-                                    AttrStyle::Outer,
-                                    Meta::NameValue(MetaNameValue {
-                                        path: p,
-                                        eq_token: _,
-                                        value,
-                                    }),
-                                ) if p.get_ident().filter(|p| *p == "rename").is_some() => {
-                                    let Expr::Lit(ExprLit {
-                                        attrs: _,
-                                        lit: Lit::Str(s),
-                                    }) = value
-                                    else {
-                                        return Err(syn::Error::new(
-                                            p.span(),
-                                            "Expected string literal value",
-                                        ));
-                                    };
-                                    rename.replace(s.value());
-                                }
-                                (_, _) => {
-                                    return Err(syn::Error::new(
-                                        meta.span(),
-                                        "unexpected attribute",
-                                    ))
-                                }
-                            }
-                        }
-
-                        fs.push(SpreadField {
-                            rename,
-                            name: ident.clone().expect("named field"),
-                            is_option,
-                            is_escaped,
-                        });
-                    }
                     vars.push((
                         var_ident.clone(),
                         SpreadBlock {
                             prefix: prefix.clone(),
                             suffix: suffix.clone(),
-                            fields: fs,
+                            fields: fields
+                                .into_iter()
+                                .map(SpreadField::parse)
+                                .collect::<syn::Result<Vec<_>>>()?,
                         },
                     ));
                 }

@@ -1,5 +1,5 @@
-mod derive;
 mod html;
+mod spread;
 
 #[macro_export]
 macro_rules! assert_html_eq {

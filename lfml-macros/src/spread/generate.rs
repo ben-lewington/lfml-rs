@@ -1,4 +1,4 @@
-use super::syntax::{SpreadBlock, SpreadData, SpreadField, SpreadInput};
+use crate::spread::syntax::{ImplTags, SpreadBlock, SpreadData, SpreadField, SpreadInput};
 
 use lfml_html5::VALID_HTML5_TAGS;
 
@@ -41,7 +41,7 @@ pub fn generate_spread_impl(
 
     let tag_wrapper = format_ident!("{data_id}Tags");
     let tags: Vec<TokenStream> = match tags {
-        super::syntax::ImplTags::DefaultWith { include, exclude } => {
+        ImplTags::DefaultWith { include, exclude } => {
             let mut ts = VALID_HTML5_TAGS
                 .iter()
                 .map(|&tag| Ident::new(tag, Span::mixed_site()))
@@ -73,7 +73,7 @@ pub fn generate_spread_impl(
                 })
                 .collect()
         }
-        super::syntax::ImplTags::Only(o) => o
+        ImplTags::Only(o) => o
             .into_iter()
             .map(|tag| {
                 quote! {
@@ -137,6 +137,7 @@ impl SpreadBlock {
             name,
             is_option,
             is_escaped,
+            is_name_only,
         } in self.fields.clone().into_iter()
         {
             let attribute_name = if let Some(t) = rename {
@@ -157,7 +158,11 @@ impl SpreadBlock {
                 }
             };
 
-            let fmt_attr = format!(" {}=\"{{}}\"", attribute_name);
+            let fmt_attr = if !is_name_only {
+                format!(" {}=\"{{}}\"", attribute_name)
+            } else {
+                format!(" {}", attribute_name)
+            };
 
             let field_ident = if var_name.is_some() {
                 quote! { &#name }
@@ -177,18 +182,35 @@ impl SpreadBlock {
                 let fmt_attr = LitStr::new(&fmt_attr, name.span());
 
                 let fmt_value = escape_value(quote! { x });
-                quote! { &{
-                    if let Some(ref x) = #field_ident {
-                        format!(#fmt_attr, #fmt_value)
-                    } else {
-                        "".into()
-                    }
-                }}
+
+                if !is_name_only {
+                    Some(quote! { &{
+                        if let Some(ref x) = #field_ident {
+                            format!(#fmt_attr, #fmt_value)
+                        } else {
+                            "".into()
+                        }
+                    }})
+                } else {
+                    Some(quote! {
+                        if let Some(_) = #field_ident {
+                            #fmt_attr
+                        } else {
+                            ""
+                        }
+                    })
+                }
             } else {
-                escape_value(quote! { &{ #field_ident } })
+                if !is_name_only {
+                    Some(escape_value(quote! { &{ #field_ident } }))
+                } else {
+                    None
+                }
             };
 
-            fmt_value_exprs.push(fmt_expr);
+            if let Some(fmt_expr) = fmt_expr {
+                fmt_value_exprs.push(fmt_expr);
+            }
             fmt_string.push_str(if is_option { "{}" } else { &fmt_attr });
             quote! { #name, }.to_tokens(&mut fs);
         }

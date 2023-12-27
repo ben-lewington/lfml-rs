@@ -1,9 +1,9 @@
-use crate::html::syntax::{InterpValue, InterpValueType, Markup, TagAttribute};
+use crate::html::syntax::{
+    InterpMarkupExpr, InterpValue, InterpValueType, Markup, MarkupId, TagAttribute,
+};
 
 use proc_macro2::{Ident, Literal, TokenStream};
 use quote::{quote, TokenStreamExt};
-
-use super::syntax::{InterpMarkupExpr, MarkupId};
 
 pub fn markup_as_string_push_operations(
     buffer_id: &Ident,
@@ -51,6 +51,7 @@ pub fn markup_as_string_push_operations(
                                         ""
                                     }
                                 });
+
                                 opening_tag.push_str("{}");
                             }
                             InterpValue::NameValue { name, wrapper } => match wrapper {
