@@ -2,8 +2,6 @@ use crate::spread::syntax::{ImplTags, SpreadBlock, SpreadData, SpreadField, Spre
 
 use lfml_html5::VALID_HTML5_TAGS;
 
-use std::iter::Extend;
-
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::{GenericParam, LitStr, TypeParam};
@@ -42,7 +40,7 @@ pub fn generate_spread_impl(
     let tag_wrapper = format_ident!("{data_id}Tags");
     let tags: Vec<TokenStream> = match tags {
         ImplTags::DefaultWith { include, exclude } => {
-            let mut ts = VALID_HTML5_TAGS
+            VALID_HTML5_TAGS
                 .iter()
                 .map(|&tag| Ident::new(tag, Span::mixed_site()))
                 .filter(|t| {
@@ -57,13 +55,7 @@ pub fn generate_spread_impl(
                         .filter(|e| e.iter().any(|e| e == t))
                         .is_none()
                 })
-                .collect::<Vec<_>>();
-
-            if let Some(incl) = include {
-                ts.extend(incl);
-            }
-
-            ts.into_iter()
+                .chain(include.clone().unwrap_or(vec![]))
                 .map(|tag| {
                     quote! {
                         fn #tag(&self) -> String {
@@ -71,7 +63,7 @@ pub fn generate_spread_impl(
                         }
                     }
                 })
-                .collect()
+                .collect::<Vec<_>>()
         }
         ImplTags::Only(o) => o
             .into_iter()
@@ -167,7 +159,7 @@ impl SpreadBlock {
             let field_ident = if var_name.is_some() {
                 quote! { &#name }
             } else {
-                quote! { &self.#name}
+                quote! { &self.#name }
             };
 
             let escape_value = |val| {
