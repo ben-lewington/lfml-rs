@@ -1,5 +1,6 @@
 [package]
 name = "lfml-escape"
+description = "code/logic shared between the macro & the types"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"

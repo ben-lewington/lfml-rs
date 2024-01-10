@@ -27,7 +27,7 @@ mod test {
     #[test]
     fn escape_works_as_expected() {
         let mut s = String::new();
-        escape_to_string("<script>launchMissiles()</script>", &mut s);
-        assert_eq!(s, "&lt;script&gt;launchMissiles()&lt;/script&gt;");
+        escape_to_string("<script>BadThings()</script>", &mut s);
+        assert_eq!(s, "&lt;script&gt;BadThings()&lt;/script&gt;");
     }
 }
