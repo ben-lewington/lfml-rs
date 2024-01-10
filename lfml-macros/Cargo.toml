@@ -1,13 +1,15 @@
 [package]
 name = "lfml-macros"
+description = "implementation of the template engine html, as well as the Spread derive macro"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lfml-escape = { path = "../lfml-escape" }
-lfml-html5 = { path = "../lfml-html5" }
+lfml-escape = "0.1.0"
+lfml-html5 = "0.1.0"
 proc-macro2 = "1.0.70"
 quote = "1.0.33"
 syn = { version = "2.0.39", features = ["extra-traits"] }
