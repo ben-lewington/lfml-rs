@@ -58,7 +58,7 @@ pub fn generate_spread_impl(
                 .chain(include.clone().unwrap_or(vec![]))
                 .map(|tag| {
                     quote! {
-                        fn #tag(&self) -> String {
+                        pub fn #tag(&self) -> String {
                             lfml::Spread::raw(&self.0)
                         }
                     }
@@ -69,7 +69,7 @@ pub fn generate_spread_impl(
             .into_iter()
             .map(|tag| {
                 quote! {
-                    fn #tag(&self) -> String {
+                    pub fn #tag(&self) -> String {
                         lfml::Spread::raw(&self.0)
                     }
                 }
@@ -108,7 +108,7 @@ pub fn generate_spread_impl(
         }
 
         impl #impl_generics #data_id #impl_ty #impl_where #(#disp_where),* {
-            fn __lfml_tags(&self) -> #tag_wrapper< &#data_id #impl_ty > {
+            pub fn __lfml_tags(&self) -> #tag_wrapper< &#data_id #impl_ty > {
                 #tag_wrapper (self)
             }
         }

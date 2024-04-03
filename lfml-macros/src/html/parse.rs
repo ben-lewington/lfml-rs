@@ -14,45 +14,37 @@ impl Iterator for LfmlParser {
     type Item = syn::Result<Markup>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        macro_rules! result_to_option {
+            ($($expr:tt)*) => {
+                match { $($expr)* } {
+                    Ok(a) => a,
+                    Err(e) => return Some(Err(e)),
+                }
+            };
+        }
         loop {
             match self.peek() {
                 Some(TokenTree::Literal(_)) => {
-                    let ls = match self.parse_literal_seq() {
-                        Ok(ls) => ls,
-                        Err(e) => {
-                            return Some(Err(e));
-                        }
-                    };
+                    let ls = result_to_option!(self.parse_literal_seq());
+
                     return Some(Ok(Markup::LiteralSequence(ls)));
                 }
                 Some(TokenTree::Ident(i)) if i == "true" || i == "false" => {
-                    let ls = match self.parse_literal_seq() {
-                        Ok(ls) => ls,
-                        Err(e) => {
-                            return Some(Err(e));
-                        }
-                    };
+                    let ls = result_to_option!(self.parse_literal_seq());
+
                     return Some(Ok(Markup::LiteralSequence(ls)));
                 }
                 Some(TokenTree::Ident(_)) => {
-                    let ident = match self.parse_ident() {
-                        Ok(i) => i,
-                        Err(e) => return Some(Err(e)),
-                    };
+                    let ident = result_to_option!(self.parse_ident());
 
-                    let (attrs, inner) = match self.parse_attrs(ident.clone()) {
-                        Ok(a) => a,
-                        Err(e) => return Some(Err(e)),
-                    };
+                    let (attrs, inner) = result_to_option!(self.parse_attrs(ident.clone()));
+
+                    // let inner = inner.map(|inner| LfmlParser(inner.into_iter()).collect::<syn::Result<Vec<Markup>>>());
 
                     let inner = if let Some(inner) = inner {
                         let mut v = vec![];
                         for t in LfmlParser(inner.into_iter()) {
-                            let t = match t {
-                                Ok(t) => t,
-                                Err(e) => return Some(Err(e)),
-                            };
-                            v.push(t);
+                            v.push(result_to_option!(t));
                         }
                         Some(v)
                     } else {
@@ -70,10 +62,7 @@ impl Iterator for LfmlParser {
 
                     let mut inner = vec![];
                     for t in LfmlParser(g.stream().into_iter()) {
-                        match t {
-                            Ok(t) => inner.push(t),
-                            Err(e) => return Some(Err(e)),
-                        }
+                        inner.push(result_to_option!(t));
                     }
                     return Some(Ok(Markup::AnonBlock(inner)));
                 }
@@ -93,22 +82,16 @@ impl Iterator for LfmlParser {
                             {
                                 self.advance();
                                 if i == "match" {
-                                    let expr = match self.parse_match() {
-                                        Ok(m) => m,
-                                        Err(e) => return Some(Err(e)),
-                                    };
+                                    let expr = result_to_option!(self.parse_match());
+
                                     return Some(Ok(Markup::Slot(expr)));
                                 } else if i == "for" {
-                                    let expr = match self.parse_for() {
-                                        Ok(m) => m,
-                                        Err(e) => return Some(Err(e)),
-                                    };
+                                    let expr = result_to_option!(self.parse_for());
+
                                     return Some(Ok(Markup::Slot(expr)));
                                 } else if i == "if" {
-                                    let expr = match self.parse_if() {
-                                        Ok(m) => m,
-                                        Err(e) => return Some(Err(e)),
-                                    };
+                                    let expr = result_to_option!(self.parse_if());
+
                                     return Some(Ok(Markup::Slot(expr)));
                                 }
                             }
@@ -118,19 +101,10 @@ impl Iterator for LfmlParser {
                         }
                         let tag = unnamed_tag_ident();
 
-                        let (attrs, inner) = match self.parse_attrs(tag.clone()) {
-                            Ok(a) => a,
-                            Err(e) => return Some(Err(e)),
-                        };
+                        let (attrs, inner) = result_to_option!(self.parse_attrs(tag.clone()));
 
                         let inner = if let Some(inner) = inner {
-                            Some(
-                                match LfmlParser(inner.into_iter()).collect::<syn::Result<Vec<_>>>()
-                                {
-                                    Ok(t) => t,
-                                    Err(e) => return Some(Err(e)),
-                                },
-                            )
+                            Some(result_to_option!(LfmlParser(inner.into_iter()).collect::<syn::Result<Vec<_>>>()))
                         } else {
                             None
                         };
@@ -138,10 +112,8 @@ impl Iterator for LfmlParser {
                         return Some(Ok(Markup::Tag { tag, attrs, inner }));
                     }
                     '-' => {
-                        let ls = match self.parse_literal_seq() {
-                            Ok(ls) => ls,
-                            Err(e) => return Some(Err(e)),
-                        };
+                        let ls = result_to_option!(self.parse_literal_seq());
+
                         return Some(Ok(Markup::LiteralSequence(ls)));
                     }
                     ';' => {
@@ -245,10 +217,7 @@ impl LfmlParser {
                                 && g.delimiter() == Delimiter::Brace =>
                             {
                                 s.advance_3();
-                                let ms: Vec<Markup> = match Self(g.stream().into_iter()).collect() {
-                                    Ok(ms) => ms,
-                                    Err(e) => return Err(e),
-                                };
+                                let ms: Vec<Markup> = Self(g.stream().into_iter()).collect::<syn::Result<Vec<_>>>()?;
 
                                 variants.push((External(inner_ext.clone()), ms));
                                 inner_ext = TokenStream::new();

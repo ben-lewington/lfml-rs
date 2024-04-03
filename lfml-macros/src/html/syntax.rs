@@ -98,7 +98,7 @@ pub enum InterpValue {
 /// implements Render (Display in attribute position).
 ///
 /// This represents the wrapper type that the expression is expected to evaluate to. This way the
-/// generated code can handle or "unwrap" the inner type, and render it into the markup.
+/// generated code can treat the inner value as an Option<Markup>.
 #[derive(Debug, Clone, Copy)]
 #[non_exhaustive]
 pub enum InterpValueType {
@@ -147,8 +147,7 @@ impl core::fmt::Display for MarkupId {
         match self {
             MarkupId::Basic(b) => write!(f, "{}", b)?,
             MarkupId::Complex(b, c) => {
-                write!(f, "{}", b)?;
-                write!(f, "{}", c)?;
+                write!(f, "{}{}", b, c)?;
             }
         }
         Ok(())
@@ -188,7 +187,7 @@ impl MarkupLit {
                         buf.push_str(&lf.to_string());
                     }
                     Lit::Bool(lb) => {
-                        eprintln!("SURPRISE: proc macro token parsing has changed now, true and false as parsed as literal booleans!");
+                        eprintln!("true and false are parsed as identifiers, not literal booleans!");
                         buf.push_str(&lb.value.to_string());
                     }
                     Lit::Verbatim(v) => {
@@ -205,10 +204,8 @@ impl MarkupLit {
             MarkupLit::NegativeNumber(l) => match Lit::new(l.clone()) {
                 Lit::Str(s) => {
                     buf.push_str(&format!("-{}", s.value()));
-                }
-                _ => {
-                    unreachable!()
-                }
+                },
+                _ => unreachable!(),
             },
         };
         Ok(())

@@ -19,6 +19,18 @@ fn class_shorthand() {
             "bar"
         }
     } => "<a class=\"3\">bar</a>");
+
+    assert_html_eq!({
+        a.(3) {
+            "bar"
+        }
+    } => "<a class=\"3\">bar</a>");
+
+    assert_html_eq!({
+        a.foo {
+            "bar"
+        }
+    } => "<a class=\"foo\">bar</a>");
 }
 
 #[test]

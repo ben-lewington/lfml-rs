@@ -7,6 +7,7 @@ use quote::quote;
 
 use self::{generate::markup_as_string_push_operations, parse::LfmlParser, syntax::MarkupId};
 
+// TODO: we can return a size hint when we parse the markup maybe?
 const SIZE_MULTIPLIER: usize = 5;
 const OUT_ID: &str = "__lfml_output";
 const UNNAMED_TAG: &str = "div";
