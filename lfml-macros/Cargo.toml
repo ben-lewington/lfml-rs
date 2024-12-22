@@ -1,7 +1,7 @@
 [package]
 name = "lfml-macros"
 description = "implementation of the template engine html, as well as the Spread derive macro"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT"
 
