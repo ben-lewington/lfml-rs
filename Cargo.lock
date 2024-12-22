@@ -118,7 +118,7 @@ dependencies = [
  "itoa",
  "lfml-escape 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lfml-html5 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "lfml-macros",
+ "lfml-macros 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -144,6 +144,19 @@ checksum = "b0de2a5c683da815bd4f22f82ca0d7e6d2e2acd2ba6cb530ec3fa7a6add3b458"
 [[package]]
 name = "lfml-macros"
 version = "0.2.0"
+dependencies = [
+ "lfml-escape 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lfml-html5 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "lfml-macros"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0c8f9774cd0dd681fda2019a395af654c06572a676e5ee7c732bf0d62400083"
 dependencies = [
  "lfml-escape 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lfml-html5 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
