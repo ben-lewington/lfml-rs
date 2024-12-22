@@ -58,3 +58,14 @@ fn attr_names_with_hyphens() {
         a-b foo-bar="baz";
     } => "<a-b foo-bar=\"baz\">");
 }
+
+#[test]
+fn attr_id_and_class() {
+    assert_html_eq!({
+        ."" {}
+    } => "<div class=\"\"></div>");
+
+    assert_html_eq!({
+        a-b foo-bar="baz";
+    } => "<a-b foo-bar=\"baz\">");
+}

@@ -39,32 +39,30 @@ pub fn generate_spread_impl(
 
     let tag_wrapper = format_ident!("{data_id}Tags");
     let tags: Vec<TokenStream> = match tags {
-        ImplTags::DefaultWith { include, exclude } => {
-            VALID_HTML5_TAGS
-                .iter()
-                .map(|&tag| Ident::new(tag, Span::mixed_site()))
-                .filter(|t| {
-                    exclude
-                        .as_ref()
-                        .filter(|e| e.iter().any(|e| e == t))
-                        .is_none()
-                })
-                .filter(|t| {
-                    include
-                        .as_ref()
-                        .filter(|e| e.iter().any(|e| e == t))
-                        .is_none()
-                })
-                .chain(include.clone().unwrap_or(vec![]))
-                .map(|tag| {
-                    quote! {
-                        pub fn #tag(&self) -> String {
-                            lfml::Spread::raw(&self.0)
-                        }
+        ImplTags::DefaultWith { include, exclude } => VALID_HTML5_TAGS
+            .iter()
+            .map(|&tag| Ident::new(tag, Span::mixed_site()))
+            .filter(|t| {
+                exclude
+                    .as_ref()
+                    .filter(|e| e.iter().any(|e| e == t))
+                    .is_none()
+            })
+            .filter(|t| {
+                include
+                    .as_ref()
+                    .filter(|e| e.iter().any(|e| e == t))
+                    .is_none()
+            })
+            .chain(include.clone().unwrap_or(vec![]))
+            .map(|tag| {
+                quote! {
+                    pub fn #tag(&self) -> String {
+                        lfml::Spread::raw(&self.0)
                     }
-                })
-                .collect::<Vec<_>>()
-        }
+                }
+            })
+            .collect::<Vec<_>>(),
         ImplTags::Only(o) => o
             .into_iter()
             .map(|tag| {

@@ -28,7 +28,7 @@ pub enum ImplTags {
     /// ```
     /// Omission of the tags attribute is the same as:
     /// ```ignore
-    /// ImplTags::DefaultWith { include: None, exclude:None}
+    /// ImplTags::DefaultWith { include: None, exclude: None}
     /// ```
     DefaultWith {
         include: Option<Vec<Ident>>,

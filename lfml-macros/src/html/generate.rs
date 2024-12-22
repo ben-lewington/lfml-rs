@@ -1,8 +1,8 @@
 use crate::html::syntax::{
-    InterpMarkupExpr, InterpValue, InterpValueType, Markup, MarkupId, TagAttribute,
+    External, InterpMarkupExpr, InterpValue, InterpValueType, Markup, MarkupId, TagAttribute,
 };
 
-use proc_macro2::{Ident, Literal, TokenStream};
+use proc_macro2::{Ident, Literal, Span, TokenStream};
 use quote::{quote, TokenStreamExt};
 
 pub fn markup_as_string_push_operations(
@@ -101,6 +101,32 @@ pub fn markup_as_string_push_operations(
                                 opening_tag.push_str("{}");
                             }
                         },
+                        TagAttribute::Block { name, value } => {
+                            let mut fmt = String::new();
+                            let mut args: Vec<External> = Vec::new();
+                            for m in value {
+                                match m {
+                                    Markup::LiteralSequence(l) => {
+                                        for lit in l {
+                                            lit.push_to_string(&mut fmt)?;
+                                        }
+                                    },
+                                    Markup::Slot(InterpMarkupExpr::Simple(s)) => {
+                                        fmt.push_str("{}");
+                                        args.push(s);
+                                    }
+                                    _ => return Err(syn::Error::new(
+                                            Span::mixed_site(),
+                                            "attribute block syntax only supports literals and simple slots",
+                                    )),
+                                }
+                            }
+                            interp_attrs.push(quote! {
+                                format!(#fmt, #(#args),*)
+                            });
+                            opening_tag.push_str(&format!(" {}=\"{{}}\"", name));
+                            // todo!("ok {name}=format!(\"{fmt}\", {args:?})");
+                        }
                     }
                 }
 

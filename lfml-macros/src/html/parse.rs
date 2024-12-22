@@ -104,7 +104,9 @@ impl Iterator for LfmlParser {
                         let (attrs, inner) = result_to_option!(self.parse_attrs(tag.clone()));
 
                         let inner = if let Some(inner) = inner {
-                            Some(result_to_option!(LfmlParser(inner.into_iter()).collect::<syn::Result<Vec<_>>>()))
+                            Some(result_to_option!(
+                                LfmlParser(inner.into_iter()).collect::<syn::Result<Vec<_>>>()
+                            ))
                         } else {
                             None
                         };
@@ -217,7 +219,8 @@ impl LfmlParser {
                                 && g.delimiter() == Delimiter::Brace =>
                             {
                                 s.advance_3();
-                                let ms: Vec<Markup> = Self(g.stream().into_iter()).collect::<syn::Result<Vec<_>>>()?;
+                                let ms: Vec<Markup> = Self(g.stream().into_iter())
+                                    .collect::<syn::Result<Vec<_>>>()?;
 
                                 variants.push((External(inner_ext.clone()), ms));
                                 inner_ext = TokenStream::new();
@@ -471,6 +474,28 @@ impl LfmlParser {
                             (Some(TokenTree::Punct(p)), _) if p.as_char() == '=' => {
                                 self.advance();
 
+                                match self.peek() {
+                                    Some(TokenTree::Literal(_)) | Some(TokenTree::Ident(_)) => {}
+                                    Some(TokenTree::Group(g)) => {
+                                        let l: Vec<Markup> = LfmlParser(g.stream().into_iter())
+                                            .into_iter()
+                                            .collect::<Result<Vec<Markup>, syn::Error>>()?;
+
+                                        output.push(TagAttribute::Block {
+                                            name: ident.clone(),
+                                            value: l,
+                                        });
+                                        self.advance();
+                                        break 'attr;
+                                    }
+                                    Some(TokenTree::Punct(_)) => {}
+                                    None => {
+                                        return Err(syn::Error::new(
+                                            p.span(),
+                                            "unexpected end of token stream",
+                                        ))
+                                    }
+                                }
                                 let Some(l) = self.parse_literal()? else {
                                     return Err(syn::Error::new(
                                         p.span(),
@@ -610,7 +635,10 @@ impl LfmlParser {
                 (Some(TokenTree::Punct(p)), _) if p.as_char() == '.' || p.as_char() == '#' => {
                     self.advance();
                     let Some(l) = self.parse_literal()? else {
-                        return Err(syn::Error::new(p.span(), "unable to parse literal"));
+                        return Err(syn::Error::new(
+                            p.span(),
+                            format!("unable to parse literal {}", p.as_char()),
+                        ));
                     };
                     let attr_name = if p.as_char() == '.' { "class" } else { "id" };
                     output.push(TagAttribute::Lit {

@@ -1,4 +1,4 @@
-use lfml::{Spread, NameOnly};
+use lfml::{NameOnly, Spread};
 
 #[test]
 fn basic() {
@@ -187,6 +187,7 @@ fn display_trait_bound_is_delegated_for_generic_types() {
     struct A<T> {
         foo: T,
     }
+    let _: A<()> = A { foo: () };
 }
 
 #[test]
@@ -267,7 +268,9 @@ fn spread_with_option_unit_nameonly_field_produces_valueless_tag() {
         foo: Option<lfml::NameOnly>,
     }
 
-    let y = A { foo: Some(NameOnly) };
+    let y = A {
+        foo: Some(NameOnly),
+    };
 
     assert_eq!(Spread::raw(&y), " foo");
 

@@ -67,3 +67,14 @@ fn attrs_with_values_can_be_toggled_with_option_valued_expressions() {
         }
     } => "<a>Hello</a>");
 }
+
+#[test]
+fn attrs_can_be_literal_sequence() {
+    let x = 3;
+
+    assert_html_eq!({
+        a foo={ "name_" (x) } {
+            "Hello"
+        }
+    } => "<a foo=\"name_3\">Hello</a>");
+}

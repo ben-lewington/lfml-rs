@@ -65,6 +65,8 @@ pub enum TagAttribute {
         r#type: InterpValue,
         value: External,
     },
+    /// A block containing only LiteralSequence and Slots
+    Block { name: MarkupId, value: Vec<Markup> },
 }
 
 #[derive(Debug, Clone)]
@@ -187,7 +189,9 @@ impl MarkupLit {
                         buf.push_str(&lf.to_string());
                     }
                     Lit::Bool(lb) => {
-                        eprintln!("true and false are parsed as identifiers, not literal booleans!");
+                        eprintln!(
+                            "true and false are parsed as identifiers, not literal booleans!"
+                        );
                         buf.push_str(&lb.value.to_string());
                     }
                     Lit::Verbatim(v) => {
@@ -204,7 +208,7 @@ impl MarkupLit {
             MarkupLit::NegativeNumber(l) => match Lit::new(l.clone()) {
                 Lit::Str(s) => {
                     buf.push_str(&format!("-{}", s.value()));
-                },
+                }
                 _ => unreachable!(),
             },
         };
