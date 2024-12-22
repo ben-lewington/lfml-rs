@@ -190,12 +190,10 @@ impl SpreadBlock {
                         }
                     })
                 }
+            } else if !is_name_only {
+                Some(escape_value(quote! { &{ #field_ident } }))
             } else {
-                if !is_name_only {
-                    Some(escape_value(quote! { &{ #field_ident } }))
-                } else {
-                    None
-                }
+                None
             };
 
             if let Some(fmt_expr) = fmt_expr {

@@ -39,8 +39,6 @@ impl Iterator for LfmlParser {
 
                     let (attrs, inner) = result_to_option!(self.parse_attrs(ident.clone()));
 
-                    // let inner = inner.map(|inner| LfmlParser(inner.into_iter()).collect::<syn::Result<Vec<Markup>>>());
-
                     let inner = if let Some(inner) = inner {
                         let mut v = vec![];
                         for t in LfmlParser(inner.into_iter()) {
@@ -478,7 +476,6 @@ impl LfmlParser {
                                     Some(TokenTree::Literal(_)) | Some(TokenTree::Ident(_)) => {}
                                     Some(TokenTree::Group(g)) => {
                                         let l: Vec<Markup> = LfmlParser(g.stream().into_iter())
-                                            .into_iter()
                                             .collect::<Result<Vec<Markup>, syn::Error>>()?;
 
                                         output.push(TagAttribute::Block {
